@@ -1,2 +1,3 @@
 # Sky-Fall
-A two player game written in assymbly x86
+A two player game written in assymbly 8086 
+

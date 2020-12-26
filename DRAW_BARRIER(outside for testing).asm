@@ -1,14 +1,14 @@
-MACRO_DRAW_BARRIER1 MACRO x,y         		;x,y are the postion of the upper left vertex
+MACRO_DRAW_BARRIER1 MACRO x,y                      		;x,y are the postion of the upper left vertex
 	                    MOV  X_BARRIER1,x
 	                    MOV  Y_BARRIER1,y
-	                    call CHECK_OVERLAPPING_BARRIER1
+	                    call CHECK_OVERLAPPING_BARRIER1  ;check if it overlaps with barrier2
 
 ENDM 
 
 MACRO_DRAW_BARRIER2 MACRO x,y                      		;x,y are the postion of the upper left vertex
 	                    MOV  X_BARRIER2,x
 	                    MOV  Y_BARRIER2,y
-	                    call CHECK_OVERLAPPING_BARRIER2
+	                    call CHECK_OVERLAPPING_BARRIER2  ;check if it overlaps with barrier 1
 
 ENDM 
 
@@ -59,7 +59,7 @@ main proc far
                   	                     
 
 	             
-	             	                              ; MACRO_DRAW_BARRIER2 50,50
+	; MACRO_DRAW_BARRIER2 50,50
 
 	                               MACRO_DRAW_BARRIER1 50,50
 
@@ -204,15 +204,16 @@ DRAW_BARRIER1 PROC NEAR
 	                               mov                 WID,ax
 	                               add                 ax,WID_BARRIER
 	                               mov                 WIDMAX,ax
-	              					CALL                DRAWRECTANGLE
+								   
+								   
+	                               CALL                DRAWRECTANGLE
 	                               CALL                FILLRECTANGLE
 
-	                               ;CALL                CHECK_BOUNDARY_BARRIER1
 	                               RET
 DRAW_BARRIER1 endp
 
 DRAW_BARRIER2 PROC NEAR
-	;CALL                CHECK_OVERLAPPING_BARRIER2
+
 
 	                               mov                 Ax,X_BARRIER2
 	                               mov                 LEN,Ax
@@ -251,7 +252,7 @@ CHECK_BOUNDARY_BARRIER1 PROC NEAR
 
 	GOOD_WIDTH:                    
 
-	                               call DRAW_BARRIER1
+	                               call                DRAW_BARRIER1
 
 	DONT_DRAW:                     
 	                               RET
@@ -294,16 +295,16 @@ CHECK_OVERLAPPING_BARRIER2 PROC NEAR
 
 	                               MOV                 AX,X_BARRIER2
 	                               CMP                 AX,X_BARRIER1
-	                               JGE                 CHECK_LESS_X1
+	                               JGE                 CHECK_LESS_X1               ; if x2>= x1 then go check if x2 is less than x1+its length
 	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
 	CHECK_LESS_X1:                 
 	                               MOV                 AX,X_BARRIER1
 	                               ADD                 AX,LEN_BARRIER
 	                               MOV                 BX,X_BARRIER2
 	                               CMP                 BX,AX
-	                               JLE                 X2_OVERLAPS
+	                               JLE                 X2_OVERLAPS                               ;this means it overlaps
 	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
-	X2_OVERLAPS:                   
+	X2_OVERLAPS:  ;if barrier 2 overlaps with barrier 1,make barrier2 start at the end of barrier1                   
 	                               MOV                 AX,X_BARRIER1
 	                               ADD                 AX,LEN_BARRIER
 	                               MOV                 X_BARRIER2,AX
@@ -311,7 +312,7 @@ CHECK_OVERLAPPING_BARRIER2 PROC NEAR
 
 
 	END_CHECK_OVERLAPPING_BARRIER2:
-	                               CALL                CHECK_BOUNDARY_BARRIER2
+	                               CALL                CHECK_BOUNDARY_BARRIER2   ;call the functin which check that the barrier is in the screen
 
 	                               RET
 CHECK_OVERLAPPING_BARRIER2 ENDP
@@ -321,16 +322,16 @@ CHECK_OVERLAPPING_BARRIER1 PROC NEAR
 
 	                               MOV                 AX,X_BARRIER1
 	                               CMP                 AX,X_BARRIER2
-	                               JGE                 CHECK_LESS_X2
+	                               JGE                 CHECK_LESS_X2       ; if x1>= x2 then go check if x1 is less than x2+its length
 	                               JMP                 END_CHECK_OVERLAPPING_BARRIER1
 	CHECK_LESS_X2:                 
 	                               MOV                 AX,X_BARRIER2
 	                               ADD                 AX,LEN_BARRIER
 	                               MOV                 BX,X_BARRIER1
 	                               CMP                 BX,AX
-	                               JLE                 X1_OVERLAPS
+	                               JLE                 X1_OVERLAPS                   ;this means it overlaps
 	                               JMP                 END_CHECK_OVERLAPPING_BARRIER1
-	X1_OVERLAPS:                   
+	X1_OVERLAPS: ;if barrier 1 overlaps with barrier 2,make barrier1 start at the end of barrier2                  
 	                               MOV                 AX,X_BARRIER2
 	                               ADD                 AX,LEN_BARRIER
 	                               MOV                 X_BARRIER1,AX
@@ -338,7 +339,7 @@ CHECK_OVERLAPPING_BARRIER1 PROC NEAR
 
 
 	END_CHECK_OVERLAPPING_BARRIER1:
-	                               CALL                CHECK_BOUNDARY_BARRIER1
+	                               CALL                CHECK_BOUNDARY_BARRIER1 ;call the functin which check that the barrier is in the screen
 
 	                               RET
 CHECK_OVERLAPPING_BARRIER1 ENDP

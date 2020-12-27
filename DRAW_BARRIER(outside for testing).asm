@@ -61,8 +61,8 @@ main proc far
 	             
 	             
 
-
-	                        MACRO_DRAW_BARRIER2 50,50
+							MACRO_DRAW_BARRIER1 100,50
+	                        MACRO_DRAW_BARRIER2 100,50
 
 
 
@@ -211,6 +211,7 @@ DRAW_BARRIER1 PROC NEAR
 DRAW_BARRIER1 endp
 
 DRAW_BARRIER2 PROC NEAR
+							CALL                CHECK_OVERLAPPING_BARRIER2
 	                        mov                 Ax,X_BARRIER2
 	                        mov                 LEN,Ax
 	                        add                 Ax,LEN_BARRIER
@@ -288,6 +289,30 @@ CHECK_BOUNDARY_BARRIER2 PROC NEAR
 	                        RET
 CHECK_BOUNDARY_BARRIER2 ENDP
 
+
+CHECK_OVERLAPPING_BARRIER2 PROC NEAR
+
+	                               MOV                 AX,X_BARRIER2
+	                               CMP                 AX,X_BARRIER1
+	                               JGE                 CHECK_LESS_X1               ; if x2>= x1 then go check if x2 is less than x1+its length
+	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
+	CHECK_LESS_X1:                 
+	                               MOV                 AX,X_BARRIER1
+	                               ADD                 AX,LEN_BARRIER
+	                               MOV                 BX,X_BARRIER2
+	                               CMP                 BX,AX
+	                               JLE                 X2_OVERLAPS                               ;this means it overlaps
+	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
+	X2_OVERLAPS:  ;if barrier 2 overlaps with barrier 1,make barrier2 start at the end of barrier1                   
+	                               MOV                 AX,X_BARRIER1
+	                               ADD                 AX,LEN_BARRIER
+	                               MOV                 X_BARRIER2,AX
+	
+
+
+	END_CHECK_OVERLAPPING_BARRIER2:
+	                               RET
+CHECK_OVERLAPPING_BARRIER2 ENDP
 
 
 end main

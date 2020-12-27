@@ -106,11 +106,20 @@ ENDM
 
 	X_BARRIER2   DW  0   	; xpos of barrier2
 	Y_BARRIER2   DW  0   	; ypos of barrier2
-;;;;;;;;;;;using in moving barriers
+
+
+
+
+;;;;;;;;;;;using in moving barriers as after each cycle
+;;(in which the barrier goes from the bottom of the page until the top of it)
 	X_BARRIER1_Last_value DW 10
 	X_BARRIER2_Last_value DW 260
 	Y_BARRIER1_Last_value DW 124
 	Y_BARRIER2_Last_value DW 104
+
+
+
+
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -168,20 +177,21 @@ MAIN PROC FAR
 												CALL MOVE_PLAYERS
 	                                      
 							                CMP Y_BARRIER1_Last_value,24 ;;check if barriers reach top of page(before reaching health bar)
+											                            
 											JLE BARRIER_1_REACH_Top
-											JG BARRIERS_1_2_DONT_REACH_TOP ;Move the 2 barriers to their initial y
+											JG BARRIERS_1_2_DONT_REACH_TOP ;Move the 2 barriers to their initial y(y=124)
 										BARRIER_1_REACH_Top:
 											 ADD Y_BARRIER1_Last_value,100
 											 ADD Y_BARRIER2_Last_value,100
 											 JMP check_x 
    BARRIERS_1_2_DONT_REACH_TOP: ;;moving barriers up
-											SUB Y_BARRIER1_Last_value,5
+											SUB Y_BARRIER1_Last_value,5 ;;step by which the barriers are moving
 				                            SUB Y_BARRIER2_Last_value,5
 											JMP X_TEMP_LABEL
 											
-
+;after each cycle we change the x initial of both barriers
     check_x:
-	     CMP X_BARRIER1_Last_value,260
+	     CMP X_BARRIER1_Last_value,260;10<=x_barrier_1<=260  
 		  JGE X_REACH_MAX 
 		  JL X_DONT_REACH_MAX                  
 									
@@ -191,8 +201,8 @@ MAIN PROC FAR
 	JMP 	X_TEMP_LABEL
 
 	X_DONT_REACH_MAX:
-	ADD X_BARRIER1_Last_value,50
-	SUB X_BARRIER2_Last_value,50	
+	ADD X_BARRIER1_Last_value,50  ;;10-->60-->120.....--->260
+	SUB X_BARRIER2_Last_value,50	;;260-->210-->...-->10
 
 		X_TEMP_LABEL:							
 JMP  CHECK_TIME                      	;after everything checks time again		

@@ -1,4 +1,20 @@
-.model HUGE
+MACRO_CLEAR_PLAYER MACRO X,Y
+
+						mov pre_position_x,x
+						mov pre_position_y,y
+						call Update_Players
+ENDM
+
+; MACRO_CLEAR_Barrier MACRO X,Y
+
+; 						mov pre_position_x,x
+; 						mov pre_position_y,y
+; 						call Update_Players
+; ENDM
+
+
+
+.model small
 
 .stack 64h
 
@@ -15,24 +31,64 @@
 	background_color    EQU 53                               ;Background pixel color id
 	graphics_mode       EQU 13h                              ;320*200 pixels , 256colors
 
-	PRE_POSITION_X       DW  ?								 ;Temp variable used when moving position to check first if it causes collisions
-	PRE_POSITION_Y      DW  ?								 ;Temp variable used when moving position to check first if it causes collisions
+	PRE_POSITION_X       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
+	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
+	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
+	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
-	first_player_health DW 2                                ;Number of hearts to the first player
-	first_player_health_X equ 0
-	first_player_health_Y equ 0
+	first_player_health DW  5                                 ;Number of hearts to the first player
+	first_player_health_X equ 0								 ;the starting upper left x coordinate of the first player's first heart
+	first_player_health_Y equ 0								 ;the starting upper left y coordinate of the first player's first heart
 	
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
-    second_player_health_X equ 305
-	second_player_health_Y equ 0
+    second_player_health_X equ 305							 ;the starting upper left x coordinate of the second player's first heart
+	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	
 	PLAYERS_WIDTH       equ  20								 ;the width of player's image
 	PLAYERS_HEIGHT      equ  25								 ;the height of player's image
 	PLAYERS_VELOCITY    DW  04h
+
+	;VARIABLES USED IN THE PROCS OF DRAWING THE BARRIER
+	LEN       	 DW  100d									 ;used by the draw barrier proc
+	WID          DW  100d									 ;used by the draw barrier proc
+	LENMAX       DW  252d									 ;used by the draw barrier proc
+	WIDMAX       DW  152d									 ;used by the draw barrier proc
+
+	X_BARRIER1   DW  10									 	 ; xpos of barrier1
+	Y_BARRIER1   DW  124  									 ; ypos of barrier1
+
+	X_BARRIER2   DW  260 									 ; xpos of barrier2
+	Y_BARRIER2   DW  104									 ; ypos of barrier2
+
+
+	
+	;using in moving barriers as after each cycle (in which the barrier goes from the bottom of the page to the top of it)
+	; X_BARRIER1_Last_value DW 10
+	; X_BARRIER2_Last_value DW 260
+	; Y_BARRIER1_Last_value DW 124
+	; Y_BARRIER2_Last_value DW 104
+
+
+
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+	;#DEFINES FOR THE LENGTH AND SIZE OF THE BARRIER
+	BARRIER_HORIZONTAL_SIZE  EQU 60D
+	BARRIER_VERTICAL_SIZE  EQU 10D
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	;;SCREEN SIZE IN PIXELS
+	SCREEN_MAX_X EQU 319D
+	SCREEN_MAX_Y EQU 199D
+
+
+
 
 	;next is the first player's pixel colors/Note: they are indexed in reversed order (from the (20,25) to (0,0))
 	p1                  DB  0, 0, 0, 16, 16, 16, 16, 16, 0, 0, 0, 0, 16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 16, 39, 39, 39, 16, 0, 0, 0, 0, 16, 39, 39, 39, 16, 0, 0, 0
@@ -92,28 +148,47 @@ MAIN PROC FAR
 									call FAR PTR draw_h2
 									CALL FAR PTR draw_p1
 									CALL FAR PTR draw_p2
+									call FAR PTR DRAW_BARRIER1
+									call FAR PTR DRAW_BARRIER2
+
+									;;;;;;;;;;;;;Game Loop functions
 									CHECK_TIME:       
 
-               
 												MOV  AH,2Ch                          	;get the system time
 												INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
 												CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
 												JE   CHECK_TIME                      	;if it is the same, check again
 												;if it's different, then draw, move, etc.
 												MOV  TIME_AUX,DL                     	;update time
+												CALL FAR PTR MOVE_BARRIERS
+												;check if health is zero, Game Over
+												mov ax,first_player_health
+												cmp ax,0
+												jz Game_Over
+
+												;check if health is zero, Game Over
+												mov ax,second_player_health
+												cmp ax,0
+												jz Game_Over
+
 												CALL FAR PTR MOVE_PLAYERS
-												;Flushing the keyboard buffer
+												;;;;;;;;;;;;;Flushing the keyboard buffer
 												mov ah,0ch
 												mov al,0
 												int 21h												
 	                                 JMP  CHECK_TIME                      	;after everything checks time again		
-	                                 RET
+	                                 
+									Game_Over: 
+	                                CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+
+									 
+									 RET
 MAIN ENDP
 	
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;taking the character from the user and reacting to it
-MOVE_PLAYERS PROC NEAR
+MOVE_PLAYERS PROC FAR
 		
 	;check if any key is being pressed
 	                                 MOV  AH,01h
@@ -140,7 +215,7 @@ MOVE_PLAYERS ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
 ;clear the console
-CLEAR_SCREEN PROC NEAR
+CLEAR_SCREEN PROC FAR
 	                                 MOV  AH,00h                          	;set the configuration to video mode
 	                                 MOV  AL,13h                          	;choose the video mode
 	                                 INT  10h                             	;execute the configuration
@@ -156,7 +231,7 @@ CLEAR_SCREEN ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
 ;draw the image of player one
-draw_p1 proc
+draw_p1 proc FAR
 	;;;;;;;;;;;;;;
 	                                 mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
 	                                 mov  di,0
@@ -189,7 +264,7 @@ draw_p1 endp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
 ;draw the image of player two
-draw_p2 proc
+draw_p2 proc FAR
 	;;;;;;;;;;;;;;
 	                                 mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
 	                                 mov  di,0
@@ -222,7 +297,7 @@ draw_p2 endp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
 ;fill the whole screen with the background color
-draw_background proc
+draw_background proc FAR
 
 	;;;;;;;;;;;;;;
 	                                 mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
@@ -248,12 +323,37 @@ draw_background endp
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
 ;draw a number of hearts that is first_player_health
-draw_h1 PROC
-	
+draw_h1 PROC FAR
+
+	;check if health is zero, don't draw
+	mov ax,first_player_health
+	cmp ax,0
+	jnz first_player_alive
+
+	RET
+	first_player_alive:
     mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
 	mov PRE_POSITION_X,first_player_health_X
 	mov PRE_POSITION_Y,first_player_health_Y
 	mov si,0
+	CLEAR_H1:
+											mov al,background_color
+											mov bh,0
+											mov cx,PRE_POSITION_X              	;the starting x-position (column)
+											add cx,health_bar_width             
+											mov dx,pre_position_y
+											add dx,window_bounds_upper
+											
+											fill_h1_background:
+											int  10h
+											dec cx
+											cmp cx,pre_position_x 
+											jnz fill_h1_background
+											mov cx,PRE_POSITION_X              	;the starting x-position (column)
+											add cx,health_bar_width             
+											dec dx
+											cmp dx,PRE_POSITION_Y
+											jnz fill_h1_background
 	draw_one_Red_heart:
 			;;;;;;;;;;;;;;
 											mov  di,0
@@ -297,12 +397,37 @@ draw_h1 ENDP
 	
 
 ;draw a number of hearts that is second_player_health
-draw_h2 PROC
+draw_h2 PROC FAR
+	;check if health is zero, don't draw
+	mov ax,first_player_health
+	cmp AX,0
+	jnz second_player_alive
 	
+
+	second_player_alive:
     mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
 	mov PRE_POSITION_X,second_player_health_X
 	mov PRE_POSITION_Y,second_player_health_Y
 	mov si,0
+	CLEAR_H2:
+											mov al,background_color
+											mov bh,0
+											mov cx,WINDOW_WIDTH              	;the ending x-position (column)
+											SUB cx,health_bar_width             
+											mov dx,pre_position_y
+											add dx,window_bounds_upper
+											
+											fill_h2_background:
+											int  10h
+											INC cx
+											cmp cx,WINDOW_WIDTH 
+											jnz fill_h2_background
+											mov cx,WINDOW_WIDTH              	;the starting x-position (column)
+											sub cx,health_bar_width             
+											dec dx
+											cmp dx,PRE_POSITION_Y
+											jnz fill_h2_background
+
 	draw_one_Blue_heart:
 			;;;;;;;;;;;;;;
 											mov  di,0
@@ -344,7 +469,140 @@ draw_h2 ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-CHECK_FIRST_PLAYER_MOVEMENT PROC 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+FILLRECTANGLE proc FAR
+	                        PUSH                LEN
+	FILL:                   
+	                        PUSH                WID
+	FILLINNER:              
+
+
+	                        MOV                 AH,0CH
+	                        MOV                 AL,7H
+	                        MOV                 BH,0H
+    
+	                        MOV                 CX,LEN
+	                        MOV                 DX,WID
+	                        INT                 10H
+
+	                        MOV                 BX,WIDMAX
+	                        INC                 WID
+	                        CMP                 WID,BX
+	                        JNZ                 FILLINNER
+	                        POP                 WID
+
+	                        INC                 LEN
+	                        MOV                 BX,LENMAX
+	                        CMP                 LEN,BX
+	                        JNZ                 FILL
+
+	                        POP                 LEN
+	                        RET
+FILLRECTANGLE ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+DRAW_BARRIER1 PROC FAR
+;As we use pre_position variables as temp, and we always call draw_barrier after we update their values 
+;We need to condition only one special case is when we draw them for the first time
+mov ax,pre_position_y
+cmp ax,0
+jz first_time_to_draw1
+
+							CLEAR_B1: 
+										    mov ah,0ch ;this means with int 10h ---> you're drawing a pixel
+											mov al,background_color
+											mov bh,0
+											mov cx,PRE_POSITION_X              	;the starting x-position (column)
+											add cx, BARRIER_HORIZONTAL_SIZE             
+											mov dx,pre_position_y
+											add dx, BARRIER_VERTICAL_SIZE
+											
+											fill_b1_background:
+											int  10h
+											dec cx
+											cmp cx,pre_position_x 
+											jnz fill_b1_background
+											mov cx,PRE_POSITION_X              	;the starting x-position (column)
+											add cx, BARRIER_HORIZONTAL_SIZE             
+											dec dx
+											cmp dx,PRE_POSITION_Y
+											jnz fill_b1_background
+
+
+							first_time_to_draw1:
+
+	                        mov                 Ax,X_BARRIER1
+	                        mov                 LEN,Ax
+	                        add                 Ax, BARRIER_HORIZONTAL_SIZE
+	                        mov                 LENMAX,ax
+	                        mov                 ax,Y_BARRIER1
+	                        mov                 WID,ax
+	                        add                 ax, BARRIER_VERTICAL_SIZE
+	                        mov                 WIDMAX,ax
+	              
+
+	                        CALL  FAR PTR              CHECK_BOUNDARY_BARRIER1
+	                        RET
+DRAW_BARRIER1 endp
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+DRAW_BARRIER2 PROC FAR
+
+;As we use pre_position variables as temp, and we always call draw_barrier after we update their values 
+;We need to condition only one special case is when we draw them for the first time
+mov ax,pre_position_y
+cmp ax,0
+jz first_draw2
+
+							CLEAR_B2: 
+											mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel'
+											mov al,background_color
+											mov bh,0
+											mov cx,PRE_POSITION_X2              	;the starting x-position (column)
+											add cx, BARRIER_HORIZONTAL_SIZE             
+											mov dx,pre_position_y2
+											add dx, BARRIER_VERTICAL_SIZE
+											
+											fill_b2_background:
+											int  10h
+											dec cx
+											cmp cx,pre_position_x2 
+											jnz fill_b2_background
+											mov cx,PRE_POSITION_X2              	;the starting x-position (column)
+											add cx, BARRIER_HORIZONTAL_SIZE             
+											dec dx
+											cmp dx,PRE_POSITION_Y2
+											jnz fill_b2_background
+
+
+							first_draw2:
+
+                           ;; CALL                CHECK_OVERLAPPING_BARRIER2
+	                        mov                 Ax,X_BARRIER2
+	                        mov                 LEN,Ax
+	                        add                 Ax, BARRIER_HORIZONTAL_SIZE
+	                        mov                 LENMAX,ax
+	                        mov                 ax,Y_BARRIER2
+	                        mov                 WID,ax
+	                        add                 ax, BARRIER_VERTICAL_SIZE
+	                        mov                 WIDMAX,ax
+	             
+	                        CALL  FAR PTR              CHECK_BOUNDARY_BARRIER2
+
+	                        RET
+DRAW_BARRIER2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;checking that this move is allowed 
+CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 ;STORE THE PREVIOUS POSITION OF PLAYER 1, we will use it if the new position causes collision (the same as push it in the stack)
 	                                 MOV  BX,first_player_X
 	                                 MOV  PRE_POSITION_X,BX
@@ -459,7 +717,10 @@ CHECK_FIRST_PLAYER_MOVEMENT PROC
 CHECK_FIRST_PLAYER_MOVEMENT ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CHECK_SECOND_PLAYER_MOVEMENT PROC 
+
+
+;checking that this move is allowed 
+CHECK_SECOND_PLAYER_MOVEMENT PROC  FAR
 	                                 mov  DX,second_player_X
 	                                 MOV  PRE_POSITION_X,DX
 	                                 mov  DX,SECOND_PLAYER_Y
@@ -569,6 +830,7 @@ CHECK_SECOND_PLAYER_MOVEMENT PROC
 	RET
 CHECK_SECOND_PLAYER_MOVEMENT ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;erase the player original position before moving
 Update_Players PROC FAR
 	
 ;;;;;;;;;;;;;;
@@ -597,7 +859,358 @@ Update_Players PROC FAR
 
 	RET
 Update_Players ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+first_player_barriers_coli PROC FAR
+                    ;check for collision between player1 and barriers(1,2)
+      ;CHECK_FOR_COLLISION_p1_b1:          
+	                           ;first_player_x+players_width<x_barrier1
+	                                 MOV  AX,first_player_X               	
+	                                 ADD  AX,PLAYERS_WIDTH
+	                                 CMP  AX,X_BARRIER1
+	                                 JNG   CHECK_FOR_COLLISION_p1_b2            	;No collision will happen
+		;first_player_x>x_barrier1+ BARRIER_HORIZONTAL_SIZE
+	                                 MOV  AX,X_BARRIER1               	
+	                                 ADD  AX, BARRIER_HORIZONTAL_SIZE
+	                                 CMP  first_player_X,AX
+	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
+		                           ;first_player_Y+players_HEIGHT<Y_barrier1
+	                                 MOV  AX,First_PLAYER_Y              
+	                                 ADD  AX,PLAYERS_HEIGHT
+	                                 CMP  AX,Y_BARRIER1
+	                                 JNG  CHECK_FOR_COLLISION_p1_b2           	;No collision will happen
+		
+	                         ;first_player_Y>Y_barrier1+ BARRIER_VERTICAL_SIZE
+	                                 MOV  AX,Y_BARRIER1              
+	                                 ADD  AX, BARRIER_VERTICAL_SIZE
+	                                 CMP  first_player_Y,AX
+	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
+
+							 ;clearing the player and moving him down								
+									mov ax,first_player_x
+									mov bx,first_player_Y
+									MACRO_CLEAR_PLAYER ax,bx
+                                    ADD first_player_Y,PLAYERS_HEIGHT
+                                    ADD first_player_Y,BARRIER_VERTICAL_SIZE
+									
+							  ;check if this makes him out of the game window make it at the top again								
+									mov bx,first_player_y
+									add bx,players_HEIGHT
+									cmp bx,WINDOW_HEIGHT
+
+									JLE  first_player_position_is_ok1
+
+									mov bx,20
+									mov first_player_Y,bx
+									first_player_position_is_ok1:
+							  ;draw the player in the new position and decrease health
+									CALL FAR PTR draw_p1
+									DEC first_player_health
+
+								
+									CALL draw_h1
+
+CHECK_FOR_COLLISION_p1_b2:          
+	                           ;first_player_x+players_width<x_barrier2
+	                                 MOV  AX,first_player_X               	
+	                                 ADD  AX,PLAYERS_WIDTH
+	                                 CMP  AX,X_BARRIER2
+	                                 JNG     EXIT_PLAYERS_barriers_col           	;No collision will happen
+		;first_player_x>x_barrier2+ BARRIER_HORIZONTAL_SIZE
+	                                 MOV  AX,X_BARRIER2               	
+	                                 ADD  AX, BARRIER_HORIZONTAL_SIZE
+	                                 CMP  first_player_X,AX
+	                                 JNL      EXIT_PLAYERS_barriers_col      	;No collision will happen
+		                           ;first_player_Y+players_HEIGHT<Y_barrier2
+	                                 MOV  AX,First_PLAYER_Y              
+	                                 ADD  AX,PLAYERS_HEIGHT
+	                                 CMP  AX,Y_BARRIER2
+	                                 JNG    EXIT_PLAYERS_barriers_col        	;No collision will happen
+		
+	                         ;first_player_Y>Y_barrier2+ BARRIER_VERTICAL_SIZE
+	                                 MOV  AX,Y_BARRIER2              
+	                                 ADD  AX, BARRIER_VERTICAL_SIZE
+	                                 CMP  first_player_Y,AX
+	                                 JNL      EXIT_PLAYERS_barriers_col         	;No collision will happen
+
+							 ;clearing the player and moving him down								
+									mov ax,first_player_x
+									mov bx,first_player_Y
+									MACRO_CLEAR_PLAYER ax,bx
+                                    ADD first_player_Y,PLAYERS_HEIGHT
+                                    ADD first_player_Y,BARRIER_VERTICAL_SIZE
+									
+							  ;check if this makes him out of the game window make it at the top again								
+									mov bx,first_player_y
+									add bx,players_HEIGHT
+									cmp bx,WINDOW_HEIGHT
+
+									JLE  first_player_position_is_ok2
+
+									mov bx,20
+									mov first_player_Y,bx
+									first_player_position_is_ok2:
+							  ;draw the player in the new position and decrease health
+									CALL FAR PTR draw_p1
+									DEC first_player_health
+
+								
+									CALL draw_h1
+
+   EXIT_PLAYERS_barriers_col:  
+	                                 RET
+first_player_barriers_coli ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+second_player_barriers_coli PROC FAR
+                    ;;check for collision between player2 and barriers(1,2)
+
+
+ CHECK_FOR_COLLISION_p2_b1:          
+	                           ;second_player_x+players_width<x_barrier1
+	                                 MOV  AX,second_player_X               	
+	                                 ADD  AX,PLAYERS_WIDTH
+	                                 CMP  AX,X_BARRIER1
+	                                 JNG   CHECK_FOR_COLLISION_p2_b2            	;No collision will happen
+		;second_player_x>x_barrier1+ BARRIER_HORIZONTAL_SIZE
+	                                 MOV  AX,X_BARRIER1               	
+	                                 ADD  AX, BARRIER_HORIZONTAL_SIZE
+	                                 CMP  second_player_X,AX
+	                                 JNL   CHECK_FOR_COLLISION_p2_b2         	;No collision will happen
+		                           ;second_player_Y+players_HEIGHT<Y_barrier1
+	                                 MOV  AX,second_PLAYER_Y              
+	                                 ADD  AX,PLAYERS_HEIGHT
+	                                 CMP  AX,Y_BARRIER1
+	                                 JNG  CHECK_FOR_COLLISION_p2_b2          	;No collision will happen
+		
+	                         ;second_player_Y>Y_barrier1+ BARRIER_VERTICAL_SIZE
+	                                 MOV  AX,Y_BARRIER1              
+	                                 ADD  AX, BARRIER_VERTICAL_SIZE
+	                                 CMP  second_player_Y,AX
+	                                 JNL  CHECK_FOR_COLLISION_p2_b2         	;No collision will happen
+
+							 ;clearing the player and moving him down								
+									mov ax,second_player_x
+									mov bx,second_player_Y
+									MACRO_CLEAR_PLAYER ax,bx
+                                    ADD second_player_Y,PLAYERS_HEIGHT
+                                    ADD second_player_Y,BARRIER_VERTICAL_SIZE
+									
+							  ;check if this makes him out of the game window make it at the top again								
+									mov bx,second_player_y
+									add bx,players_HEIGHT
+									cmp bx,WINDOW_HEIGHT
+
+									JLE  second_player_position_is_ok1
+
+									mov bx,20
+									mov second_player_Y,bx
+									second_player_position_is_ok1:
+							  ;draw the player in the new position and decrease health
+									CALL FAR PTR draw_p2
+									DEC second_player_health
+
+								
+									CALL draw_h2
+
+ CHECK_FOR_COLLISION_p2_b2:          
+	                           ;second_player_x+players_width<x_barrier2
+	                                 MOV  AX,second_player_X               	
+	                                 ADD  AX,PLAYERS_WIDTH
+	                                 CMP  AX,X_BARRIER2
+	                                 JNG    EXIT2_PLAYERS_barriers_col          	;No collision will happen
+		;second_player_x>x_barrier1+ BARRIER_HORIZONTAL_SIZE
+	                                 MOV  AX,X_BARRIER2               	
+	                                 ADD  AX, BARRIER_HORIZONTAL_SIZE
+	                                 CMP  second_player_X,AX
+	                                 JNL     EXIT2_PLAYERS_barriers_col         	;No collision will happen
+		                           ;second_player_Y+players_HEIGHT<Y_barrier1
+	                                 MOV  AX,second_PLAYER_Y              
+	                                 ADD  AX,PLAYERS_HEIGHT
+	                                 CMP  AX,Y_BARRIER2
+	                                 JNG    EXIT2_PLAYERS_barriers_col         	;No collision will happen
+		
+	                         ;second_player_Y>Y_barrier1+ BARRIER_VERTICAL_SIZE
+	                                 MOV  AX,Y_BARRIER2              
+	                                 ADD  AX, BARRIER_VERTICAL_SIZE
+	                                 CMP  second_player_Y,AX
+	                                 JNL    EXIT2_PLAYERS_barriers_col        	;No collision will happen
+
+							 ;clearing the player and moving him down								
+									mov ax,second_player_x
+									mov bx,second_player_Y
+									MACRO_CLEAR_PLAYER ax,bx
+                                    ADD second_player_Y,PLAYERS_HEIGHT
+                                    ADD second_player_Y,BARRIER_VERTICAL_SIZE
+									
+							  ;check if this makes him out of the game window make it at the top again								
+									mov bx,second_player_y
+									add bx,players_HEIGHT
+									cmp bx,WINDOW_HEIGHT
+
+									JLE  second_player_position_is_ok2
+
+									mov bx,20
+									mov second_player_Y,bx
+									second_player_position_is_ok2:
+							  ;draw the player in the new position and decrease health
+									CALL FAR PTR draw_p2
+									DEC second_player_health
+
+								
+									CALL draw_h2
+   
+  EXIT2_PLAYERS_barriers_col:  
+	                                 RET
+second_player_barriers_coli ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CHECK_BOUNDARY_BARRIER1 PROC FAR
+
+				
+	                        MOV                 AX,X_BARRIER1
+	                        CMP                 AX,SCREEN_MAX_X
+	                        JE                  DONT_DRAW                  	;-> IF X==THE LAST ROW OF PIXELS THEN DONT DRAW
+	                        MOV                 BX,SCREEN_MAX_X- BARRIER_HORIZONTAL_SIZE
+	                        CMP                 BX,AX                      	;IF(BX>=AX) THEN NOTHING,,,,, ELSE -> THE BARRIER LENGTH WILL BE OUT OF THE SCREEN AND HAVE TO BE SHORTENED
+
+	                        JAE                 GOOD_LENGTH
+	                        MOV                 LENMAX,SCREEN_MAX_X
+
+	GOOD_LENGTH:            
+	                        MOV                 AX,Y_BARRIER1
+	                        CMP                 AX,SCREEN_MAX_Y
+	                        JE                  DONT_DRAW                  	;; IF Y== LAST COLUMN OF PIXELS THEN DONT DRAW
+	                        MOV                 BX,SCREEN_MAX_Y- BARRIER_VERTICAL_SIZE
+	                        CMP                 BX,AX                      	;IF(BX>=AX) THEN NOTHING,,,,, ELSE -> THE BARRIER WIDTH WILL BE OUT OF THE SCREEN AND HAVE TO BE SHORTENED
+	                        JAE                 GOOD_WIDTH
+
+	                        MOV                 WIDMAX,SCREEN_MAX_Y
+
+	GOOD_WIDTH:             
+	                                        
+	                        CALL                FILLRECTANGLE
+
+	DONT_DRAW:              
+	                        RET
+CHECK_BOUNDARY_BARRIER1 ENDP
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+CHECK_BOUNDARY_BARRIER2 PROC FAR
+
+				
+	                        MOV                 AX,X_BARRIER2
+	                        CMP                 AX,SCREEN_MAX_X
+	                        JE                  DONT_DRAW2                  	;-> IF X==THE LAST ROW OF PIXELS THEN DONT DRAW
+	                        MOV                 BX,SCREEN_MAX_X- BARRIER_HORIZONTAL_SIZE
+	;IF(BX>=AX) THEN NOTHING,,,,, ELSE -> THE BARRIER LENGTH WILL BE OUT OF THE SCREEN AND HAVE TO BE SHORTENED
+	                        CMP                 BX,AX
+	                        JAE                 GOOD_LENGTH2
+	                        MOV                 LENMAX,SCREEN_MAX_X
+
+	GOOD_LENGTH2:            
+	                        MOV                 AX,Y_BARRIER2
+	                        CMP                 AX,SCREEN_MAX_Y
+	                        JE                  DONT_DRAW2                  	;; IF Y== LAST COLUMN OF PIXELS THEN DONT DRAW
+	                        MOV                 BX,SCREEN_MAX_Y- BARRIER_VERTICAL_SIZE
+	                        CMP                 BX,AX                      	;IF(BX>=AX) THEN NOTHING,,,,, ELSE -> THE BARRIER WIDTH WILL BE OUT OF THE SCREEN AND HAVE TO BE SHORTENED
+	                        JAE                 GOOD_WIDTH2
+
+	                        MOV                 WIDMAX,SCREEN_MAX_Y
+
+	GOOD_WIDTH2:             
+	                        CALL                FILLRECTANGLE
+
+	DONT_DRAW2:              
+	                        RET
+CHECK_BOUNDARY_BARRIER2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CHECK_OVERLAPPING_BARRIER2 PROC FAR
+
+	                               MOV                 AX,X_BARRIER2
+	                               CMP                 AX,X_BARRIER1
+	                               JGE                 CHECK_LESS_X1               ; if x2>= x1 then go check if x2 is less than x1+its length
+	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
+	CHECK_LESS_X1:                 
+	                               MOV                 AX,X_BARRIER1
+	                               ADD                 AX, BARRIER_HORIZONTAL_SIZE
+	                               MOV                 BX,X_BARRIER2
+	                               CMP                 BX,AX
+	                               JLE                 X2_OVERLAPS                               ;this means it overlaps
+	                               JMP                 END_CHECK_OVERLAPPING_BARRIER2
+	X2_OVERLAPS:  ;if barrier 2 overlaps with barrier 1,make barrier2 start at the end of barrier1                   
+	                               MOV                 AX,X_BARRIER1
+	                               ADD                 AX, BARRIER_HORIZONTAL_SIZE
+	                               MOV                 X_BARRIER2,AX
+	
+
+
+	END_CHECK_OVERLAPPING_BARRIER2:
+	                               RET
+CHECK_OVERLAPPING_BARRIER2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;MOVING BARRIER 1,2 
+MOVE_BARRIERS PROC FAR
+
+
+												MOV AX,x_barrier1
+												MOV PRE_POSITION_X,AX
+												MOV AX,Y_barrier1
+												MOV PRE_POSITION_Y,AX
+
+												MOV AX,x_barrier2
+												MOV PRE_POSITION_X2,AX
+												MOV AX,Y_barrier2
+												MOV PRE_POSITION_Y2,AX
+												
+
+							                	CMP Y_BARRIER1 ,24 			;check if barriers reach top of page(before reaching health bar)                            
+												JLE BARRIER_1_REACH_Top
+												JG BARRIERS_1_2_DONT_REACH_TOP			;Move the 2 barriers to their initial y(y=124)
+												BARRIER_1_REACH_Top:
+																	 ADD Y_BARRIER1,100
+																	 ADD Y_BARRIER2,100
+																	 JMP check_x 
+											   BARRIERS_1_2_DONT_REACH_TOP: 		;moving barriers up
+																				SUB Y_BARRIER1,5 ;5 steps by which the barriers are moving
+				                            									SUB Y_BARRIER2,5
+																				JMP X_TEMP_LABEL
+											
+												;after each cycle we change the x initial of both barriers
+    											check_x:
+													     CMP X_BARRIER1,260;10<=x_barrier_1<= 260  
+														 JGE X_REACH_MAX 
+														 JL X_DONT_REACH_MAX                  
+									
+												X_REACH_MAX:
+															SUB X_BARRIER1,200
+															ADD X_BARRIER2,200	
+															JMP X_TEMP_LABEL
+
+												X_DONT_REACH_MAX:
+																ADD X_BARRIER1,50  ;;10-->60-->120.....--->260
+																SUB X_BARRIER2,50	;;260-->210-->...-->10
+
+												X_TEMP_LABEL:		
+												CALL DRAW_BARRIER1
+												CALL DRAW_BARRIER2
+												CALL first_player_barriers_coli
+												CALL second_player_barriers_coli
+
+
+							RET
+												
+MOVE_BARRIERS ENDP
+
 END MAIN

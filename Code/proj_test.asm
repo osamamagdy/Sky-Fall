@@ -498,32 +498,35 @@ draw_h2 ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 FILLRECTANGLE proc FAR
+
+                            MOV DI,0
 	                        PUSH                LEN
 	FILL:                   
-	                        PUSH                WID
+	                        PUSH                LEN
 	FILLINNER:              
 
 
 	                        MOV                 AH,0CH
-	                        MOV                 AL,7H
+	                        MOV                 AL,Barrier_array[DI]
+							INC                 DI
 	                        MOV                 BH,0H
     
 	                        MOV                 CX,LEN
 	                        MOV                 DX,WID
 	                        INT                 10H
 
-	                        MOV                 BX,WIDMAX
-	                        INC                 WID
-	                        CMP                 WID,BX
-	                        JNZ                 FILLINNER
-	                        POP                 WID
-
-	                        INC                 LEN
 	                        MOV                 BX,LENMAX
-	                        CMP                 LEN,BX
+	                        INC                 LEN
+	                        CMP                 BX,LEN
+	                        JNZ                 FILLINNER
+	                        POP                 LEN
+
+	                        INC                 WID
+	                        MOV                 BX,WIDMAX
+	                        CMP                 BX,WID
 	                        JNZ                 FILL
 
-	                        POP                 LEN
+	                        POP                 WID
 	                        RET
 FILLRECTANGLE ENDP
 

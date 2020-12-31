@@ -41,13 +41,17 @@ ENDM
 	first_player_health DW  5                                 ;Number of hearts to the first player
 	first_player_health_X equ 0								 ;the starting upper left x coordinate of the first player's first heart
 	first_player_health_Y equ 0								 ;the starting upper left y coordinate of the first player's first heart
-	
+	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
+
+
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
     second_player_health_X equ 305							 ;the starting upper left x coordinate of the second player's first heart
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
+	second_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	
+
 	PLAYERS_WIDTH       equ  20								 ;the width of player's image
 	PLAYERS_HEIGHT      equ  25								 ;the height of player's image
 	PLAYERS_VELOCITY    DW  04h
@@ -897,41 +901,30 @@ first_player_barriers_coli PROC FAR
 	                                 ADD  AX, BARRIER_HORIZONTAL_SIZE
 	                                 CMP  first_player_X,AX
 	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
-		                           ;first_player_Y+players_HEIGHT<Y_barrier1
+		                   ;first_player_Y+players_HEIGHT<Y_barrier1
 	                                 MOV  AX,First_PLAYER_Y              
 	                                 ADD  AX,PLAYERS_HEIGHT
 	                                 CMP  AX,Y_BARRIER1
 	                                 JNG  CHECK_FOR_COLLISION_p1_b2           	;No collision will happen
 		
-	                         ;first_player_Y>Y_barrier1+ BARRIER_VERTICAL_SIZE
+	                        ;first_player_Y>Y_barrier1+ BARRIER_VERTICAL_SIZE
 	                                 MOV  AX,Y_BARRIER1              
 	                                 ADD  AX, BARRIER_VERTICAL_SIZE
 	                                 CMP  first_player_Y,AX
 	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
 
-							 ;clearing the player and moving him down								
-									mov ax,first_player_x
-									mov bx,first_player_Y
-									MACRO_CLEAR_PLAYER ax,bx
-                                    ADD first_player_Y,PLAYERS_HEIGHT
-                                    ADD first_player_Y,BARRIER_VERTICAL_SIZE
-									
-							  ;check if this makes him out of the game window make it at the top again								
-									mov bx,first_player_y
-									add bx,players_HEIGHT
-									cmp bx,WINDOW_HEIGHT
+							;check if he has immunity to collision
+									cmp first_player_health_immunity , 0
+									JZ Decrease_first_health_1
+									JNZ Donot_Decrease_first_health_1 
+									Decrease_first_health_1:	
+															DEC first_player_health
+							;give him immunity to not be affected by any barriers for this player
+															MOV first_player_health_immunity,25
+															CALL draw_h1
+									Donot_Decrease_first_health_1:
+									DEC first_player_health_immunity
 
-									JLE  first_player_position_is_ok1
-
-									mov bx,20
-									mov first_player_Y,bx
-									first_player_position_is_ok1:
-							  ;draw the player in the new position and decrease health
-									CALL FAR PTR draw_p1
-									;DEC first_player_health
-
-								
-									CALL draw_h1
 
 CHECK_FOR_COLLISION_p1_b2:          
 	                           ;first_player_x+players_width<x_barrier2
@@ -956,29 +949,18 @@ CHECK_FOR_COLLISION_p1_b2:
 	                                 CMP  first_player_Y,AX
 	                                 JNL      EXIT_PLAYERS_barriers_col         	;No collision will happen
 
-							 ;clearing the player and moving him down								
-									mov ax,first_player_x
-									mov bx,first_player_Y
-									MACRO_CLEAR_PLAYER ax,bx
-                                    ADD first_player_Y,PLAYERS_HEIGHT
-                                    ADD first_player_Y,BARRIER_VERTICAL_SIZE
-									
-							  ;check if this makes him out of the game window make it at the top again								
-									mov bx,first_player_y
-									add bx,players_HEIGHT
-									cmp bx,WINDOW_HEIGHT
 
-									JLE  first_player_position_is_ok2
-
-									mov bx,20
-									mov first_player_Y,bx
-									first_player_position_is_ok2:
-							  ;draw the player in the new position and decrease health
-									CALL FAR PTR draw_p1
-									;DEC first_player_health
-
-								
-									CALL draw_h1
+							;check if he has immunity to collision
+									cmp first_player_health_immunity , 0
+									JZ Decrease_first_health_2
+									JNZ Donot_Decrease_first_health_2 
+									Decrease_first_health_2:	
+															DEC first_player_health
+							;give him immunity to not be affected by any barriers for this player
+															MOV first_player_health_immunity,25
+															CALL draw_h1
+									Donot_Decrease_first_health_2:
+									DEC first_player_health_immunity
 
    EXIT_PLAYERS_barriers_col:  
 	                                 RET
@@ -1012,29 +994,18 @@ second_player_barriers_coli PROC FAR
 	                                 CMP  second_player_Y,AX
 	                                 JNL  CHECK_FOR_COLLISION_p2_b2         	;No collision will happen
 
-							 ;clearing the player and moving him down								
-									mov ax,second_player_x
-									mov bx,second_player_Y
-									MACRO_CLEAR_PLAYER ax,bx
-                                    ADD second_player_Y,PLAYERS_HEIGHT
-                                    ADD second_player_Y,BARRIER_VERTICAL_SIZE
-									
-							  ;check if this makes him out of the game window make it at the top again								
-									mov bx,second_player_y
-									add bx,players_HEIGHT
-									cmp bx,WINDOW_HEIGHT
 
-									JLE  second_player_position_is_ok1
-
-									mov bx,20
-									mov second_player_Y,bx
-									second_player_position_is_ok1:
-							  ;draw the player in the new position and decrease health
-									CALL FAR PTR draw_p2
-									;DEC second_player_health
-
-								
-									CALL draw_h2
+							;check if he has immunity to collision
+									cmp second_player_health_immunity , 0
+									JZ Decrease_second_health_1
+									JNZ Donot_Decrease_second_health_1 
+									Decrease_second_health_1:	
+															DEC second_player_health
+							;give him immunity to not be affected by any barriers for this player
+															MOV second_player_health_immunity,25
+															CALL draw_h2
+									Donot_Decrease_second_health_1:
+									DEC second_player_health_immunity
 
  CHECK_FOR_COLLISION_p2_b2:          
 	                           ;second_player_x+players_width<x_barrier2
@@ -1059,31 +1030,20 @@ second_player_barriers_coli PROC FAR
 	                                 CMP  second_player_Y,AX
 	                                 JNL    EXIT2_PLAYERS_barriers_col        	;No collision will happen
 
-							 ;clearing the player and moving him down								
-									mov ax,second_player_x
-									mov bx,second_player_Y
-									MACRO_CLEAR_PLAYER ax,bx
-                                    ADD second_player_Y,PLAYERS_HEIGHT
-                                    ADD second_player_Y,BARRIER_VERTICAL_SIZE
-									
-							  ;check if this makes him out of the game window make it at the top again								
-									mov bx,second_player_y
-									add bx,players_HEIGHT
-									cmp bx,WINDOW_HEIGHT
 
-									JLE  second_player_position_is_ok2
 
-									;the initial start of the player
-									mov bx,20
-									mov second_player_Y,bx
-									second_player_position_is_ok2:
-							  ;draw the player in the new position and decrease health
-									CALL FAR PTR draw_p2
-									;DEC second_player_health
-
-								
-									CALL draw_h2
-   
+							;check if he has immunity to collision
+									cmp second_player_health_immunity , 0
+									JZ Decrease_second_health_2
+									JNZ Donot_Decrease_second_health_2 
+									Decrease_second_health_2:	
+															DEC second_player_health
+							;give him immunity to not be affected by any barriers for this player
+															MOV second_player_health_immunity,25
+															CALL draw_h2
+									Donot_Decrease_second_health_2:
+									DEC second_player_health_immunity
+ 
   EXIT2_PLAYERS_barriers_col:  
 	                                 RET
 second_player_barriers_coli ENDP
@@ -1249,11 +1209,12 @@ MOVE_BARRIERS PROC FAR
 												
 
 												X_TEMP_LABEL:		
-												CALL DRAW_BARRIER1
-												CALL DRAW_BARRIER2
 												CALL first_player_barriers_coli
 												CALL second_player_barriers_coli
-
+												CALL draw_p1
+												CALL draw_p2
+												CALL DRAW_BARRIER1
+												CALL DRAW_BARRIER2
 
 							RET
 												

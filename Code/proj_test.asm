@@ -44,7 +44,7 @@ ENDM
 	
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
-	second_player_health DW 5                                ;Number of hearts to the second player
+	second_player_health DW 1                                ;Number of hearts to the second player
     second_player_health_X equ 305							 ;the starting upper left x coordinate of the second player's first heart
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	
@@ -140,7 +140,7 @@ ENDM
 
 
 
-	Barrier_array img 	DB 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186
+	Barrier_array	 	DB 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186
  					    DB 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186
  						DB 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186
  						DB 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186
@@ -420,10 +420,10 @@ draw_h1 ENDP
 ;draw a number of hearts that is second_player_health
 draw_h2 PROC FAR
 	;check if health is zero, don't draw
-	mov ax,first_player_health
+	mov ax,second_player_health
 	cmp AX,0
 	jnz second_player_alive
-	
+	RET
 
 	second_player_alive:
     mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
@@ -1072,6 +1072,7 @@ second_player_barriers_coli PROC FAR
 
 									JLE  second_player_position_is_ok2
 
+									;the initial start of the player
 									mov bx,20
 									mov second_player_Y,bx
 									second_player_position_is_ok2:

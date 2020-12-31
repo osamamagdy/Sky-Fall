@@ -63,7 +63,7 @@ ENDM
 	Y_BARRIER1   DW  124  									 ; ypos of barrier1
 
 	X_BARRIER2   DW  260 									 ; xpos of barrier2
-	Y_BARRIER2   DW  104									 ; ypos of barrier2
+	Y_BARRIER2   DW  124									 ; ypos of barrier2
 
 
 	
@@ -928,7 +928,7 @@ first_player_barriers_coli PROC FAR
 									first_player_position_is_ok1:
 							  ;draw the player in the new position and decrease health
 									CALL FAR PTR draw_p1
-									;DEC first_player_health
+									DEC first_player_health
 
 								
 									CALL draw_h1
@@ -975,7 +975,7 @@ CHECK_FOR_COLLISION_p1_b2:
 									first_player_position_is_ok2:
 							  ;draw the player in the new position and decrease health
 									CALL FAR PTR draw_p1
-									;DEC first_player_health
+									DEC first_player_health
 
 								
 									CALL draw_h1
@@ -1031,7 +1031,7 @@ second_player_barriers_coli PROC FAR
 									second_player_position_is_ok1:
 							  ;draw the player in the new position and decrease health
 									CALL FAR PTR draw_p2
-									;DEC second_player_health
+									DEC second_player_health
 
 								
 									CALL draw_h2
@@ -1079,7 +1079,7 @@ second_player_barriers_coli PROC FAR
 									second_player_position_is_ok2:
 							  ;draw the player in the new position and decrease health
 									CALL FAR PTR draw_p2
-									;DEC second_player_health
+									DEC second_player_health
 
 								
 									CALL draw_h2
@@ -1196,57 +1196,34 @@ MOVE_BARRIERS PROC FAR
 												MOV PRE_POSITION_X2,AX
 												MOV AX,Y_barrier2
 												MOV PRE_POSITION_Y2,AX
-											
-												CHECK_BARRIER1_TOP:			;check if barrier1 reach top of page(before reaching health bar)
-																	CMP Y_BARRIER1 ,24 			                            
-																	JLE BARRIER_1_REACHED_TOP
-																	JG BARRIERS_1_DIDNT_REACH_TOP
+												
 
-												BARRIER_1_REACHED_TOP: 		;If reached top of page return it to the bottom
+							                	CMP Y_BARRIER1 ,24 			;check if barriers reach top of page(before reaching health bar)                            
+												JLE BARRIER_1_REACH_Top
+												JG BARRIERS_1_2_DONT_REACH_TOP			;Move the 2 barriers to their initial y(y=124)
+												BARRIER_1_REACH_Top:
 																	 Mov Y_BARRIER1,Initial_Y_Barrier1
-																	 ;Change the X-position of the Barrier
-																	check_x1:
-																				CMP X_BARRIER1,260;10<=x_barrier_1<= 260  
-																				JGE X1_REACH_MAX 
-																				JL X1_DONT_REACH_MAX                  
-														
-																	X1_REACH_MAX:
-																				SUB X_BARRIER1,200
-																				JMP CHECK_BARRIER2_TOP
-
-																	X1_DONT_REACH_MAX:
-																					ADD X_BARRIER1,50  ;;10-->60-->120.....--->260
-																					JMP CHECK_BARRIER2_TOP
-
-												BARRIERS_1_DIDNT_REACH_TOP:		;moving barriers up
-																	SUB Y_Barrier1,1		;5 steps by which the barriers are moving
-												
-												CHECK_BARRIER2_TOP: 		;check if barrier2 reach top of page(before reaching health bar)
-																	CMP Y_BARRIER2 ,24 			                            
-																	JLE BARRIER_2_REACHED_TOP
-																	JG BARRIERS_2_DIDNT_REACH_TOP
-
-												BARRIER_2_REACHED_TOP: 
-																	 Mov Y_BARRIER2,Initial_Y_Barrier2
-																	 ;Randomize the X-position of the Barrier
-																	check_x2:
-																			CMP X_BARRIER2,10;10<=x_barrier_1<= 260  
-																			JLE X2_REACH_MAX 
-																			JG X2_DONT_REACH_MAX                  
-														
-																	X2_REACH_MAX:
-																				ADD X_BARRIER2,200	
+																	 MOV Y_BARRIER2,Initial_Y_Barrier2
+																	 JMP check_x 
+											   BARRIERS_1_2_DONT_REACH_TOP: 		;moving barriers up
+																				SUB Y_BARRIER1,5 ;5 steps by which the barriers are moving
+				                            									SUB Y_BARRIER2,5
 																				JMP X_TEMP_LABEL
+											
+												;after each cycle we change the x initial of both barriers
+    											check_x:
+													     CMP X_BARRIER1,260;10<=x_barrier_1<= 260  
+														 JGE X_REACH_MAX 
+														 JL X_DONT_REACH_MAX                  
+									
+												X_REACH_MAX:
+															SUB X_BARRIER1,200
+															ADD X_BARRIER2,200	
+															JMP X_TEMP_LABEL
 
-																	X2_DONT_REACH_MAX:
-																					SUB X_BARRIER2,50	;;260-->210-->...-->10
-																					JMP X_TEMP_LABEL
-																						
-
-												BARRIERS_2_DIDNT_REACH_TOP:		;moving barriers up
-																	SUB Y_Barrier2,2		;5 steps by which the barriers are moving
-												
-												
+												X_DONT_REACH_MAX:
+																ADD X_BARRIER1,50  ;;10-->60-->120.....--->260
+																SUB X_BARRIER2,50	;;260-->210-->...-->10
 
 												X_TEMP_LABEL:		
 												CALL DRAW_BARRIER1

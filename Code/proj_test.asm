@@ -44,7 +44,7 @@ ENDM
 	
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
-	second_player_health DW 1                                ;Number of hearts to the second player
+	second_player_health DW 5                                ;Number of hearts to the second player
     second_player_health_X equ 305							 ;the starting upper left x coordinate of the second player's first heart
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	
@@ -57,12 +57,13 @@ ENDM
 	WID          DW  100d									 ;used by the draw barrier proc
 	LENMAX       DW  252d									 ;used by the draw barrier proc
 	WIDMAX       DW  152d									 ;used by the draw barrier proc
-
+	Initial_Y_Barrier1   EQU 124
+	Initial_Y_Barrier2 EQU 124
 	X_BARRIER1   DW  10									 	 ; xpos of barrier1
 	Y_BARRIER1   DW  124  									 ; ypos of barrier1
 
 	X_BARRIER2   DW  260 									 ; xpos of barrier2
-	Y_BARRIER2   DW  104									 ; ypos of barrier2
+	Y_BARRIER2   DW  124									 ; ypos of barrier2
 
 
 	
@@ -1201,8 +1202,8 @@ MOVE_BARRIERS PROC FAR
 												JLE BARRIER_1_REACH_Top
 												JG BARRIERS_1_2_DONT_REACH_TOP			;Move the 2 barriers to their initial y(y=124)
 												BARRIER_1_REACH_Top:
-																	 ADD Y_BARRIER1,100
-																	 ADD Y_BARRIER2,100
+																	 Mov Y_BARRIER1,Initial_Y_Barrier1
+																	 MOV Y_BARRIER2,Initial_Y_Barrier2
 																	 JMP check_x 
 											   BARRIERS_1_2_DONT_REACH_TOP: 		;moving barriers up
 																				SUB Y_BARRIER1,5 ;5 steps by which the barriers are moving

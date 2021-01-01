@@ -542,26 +542,7 @@ mov ax,pre_position_y
 cmp ax,0
 jz first_time_to_draw1
 
-							CLEAR_B1: 
-										    mov ah,0ch ;this means with int 10h ---> you're drawing a pixel
-											mov al,background_color
-											mov bh,0
-											mov cx,PRE_POSITION_X              	;the starting x-position (column)
-											add cx, BARRIER_HORIZONTAL_SIZE             
-											mov dx,pre_position_y
-											add dx, BARRIER_VERTICAL_SIZE
-											
-											fill_b1_background:
-											int  10h
-											dec cx
-											cmp cx,pre_position_x 
-											jnz fill_b1_background
-											mov cx,PRE_POSITION_X              	;the starting x-position (column)
-											add cx, BARRIER_HORIZONTAL_SIZE             
-											dec dx
-											cmp dx,PRE_POSITION_Y
-											jnz fill_b1_background
-
+							
 
 							first_time_to_draw1:
 
@@ -589,27 +570,7 @@ mov ax,pre_position_y
 cmp ax,0
 jz first_draw2
 
-							CLEAR_B2: 
-											mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel'
-											mov al,background_color
-											mov bh,0
-											mov cx,PRE_POSITION_X2              	;the starting x-position (column)
-											add cx, BARRIER_HORIZONTAL_SIZE             
-											mov dx,pre_position_y2
-											add dx, BARRIER_VERTICAL_SIZE
-											
-											fill_b2_background:
-											int  10h
-											dec cx
-											cmp cx,pre_position_x2 
-											jnz fill_b2_background
-											mov cx,PRE_POSITION_X2              	;the starting x-position (column)
-											add cx, BARRIER_HORIZONTAL_SIZE             
-											dec dx
-											cmp dx,PRE_POSITION_Y2
-											jnz fill_b2_background
-
-
+					
 							first_draw2:
 
                            ;; CALL                CHECK_OVERLAPPING_BARRIER2
@@ -1145,9 +1106,64 @@ CHECK_OVERLAPPING_BARRIER2 PROC FAR
 CHECK_OVERLAPPING_BARRIER2 ENDP
 
 
+ERASE_RECTANGLE proc FAR
+
+                            ;MOV DI,0
+	                        PUSH                LEN
+	ERASE:                   
+	                        PUSH                LEN
+	ERASEINNER:              
+
+
+	                        MOV                 AH,0CH
+	                        MOV                 AL,background_color
+							INC                 DI
+	                        MOV                 BH,0H
+    
+	                        MOV                 CX,LEN
+	                        MOV                 DX,WID
+	                        INT                 10H
+
+	                        MOV                 BX,LENMAX
+	                        INC                 LEN
+	                        CMP                 BX,LEN
+	                        JNZ                 ERASEINNER
+	                        POP                 LEN
+
+	                        INC                 WID
+	                        MOV                 BX,WIDMAX
+	                        CMP                 BX,WID
+	                        JNZ                 ERASE
+
+	                        POP                 WID
+	                        RET
+ERASE_RECTANGLE ENDP
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;MOVING BARRIER 1,2 
 MOVE_BARRIERS PROC FAR
+												;; DELETE THE OLD BARRIER1 BEFORE DRAWING IT IN THE NEW POSITION
+												MOV AX,X_BARRIER1
+												MOV LEN,AX	
+												ADD AX,BARRIER_HORIZONTAL_SIZE
+												MOV LENMAX,AX	
+												MOV AX,Y_BARRIER1
+												MOV WID,AX
+												ADD AX,BARRIER_VERTICAL_SIZE	
+												MOV WIDMAX,AX
+												CALL  ERASE_RECTANGLE
+
+												;; DELETE THE OLD BARRIER1 BEFORE DRAWING IT IN THE NEW POSITION
+												MOV AX,X_BARRIER2
+												MOV LEN,AX	
+												ADD AX,BARRIER_HORIZONTAL_SIZE
+												MOV LENMAX,AX	
+												MOV AX,Y_BARRIER2
+												MOV WID,AX
+												ADD AX,BARRIER_VERTICAL_SIZE	
+												MOV WIDMAX,AX
+												CALL  ERASE_RECTANGLE
 
 
 												MOV AX,x_barrier1
@@ -1222,5 +1238,8 @@ MOVE_BARRIERS PROC FAR
 							RET
 												
 MOVE_BARRIERS ENDP
+
+
+
 
 END MAIN

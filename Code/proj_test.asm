@@ -14,7 +14,7 @@ ENDM
 
 
 
-.model small
+.model HUGE
 
 .stack 64h
 
@@ -231,12 +231,25 @@ MAIN ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;taking the character from the user and reacting to it
 MOVE_PLAYERS PROC FAR
-		
+
+;Check if any player is freezed--> then reduce its freezing time
+	cmp first_player_freeze,0
+	je Is_Second_Player_Freeze
+	dec first_player_freeze
+
+	Is_Second_Player_Freeze:
+	cmp second_player_freeze,0
+	je Check_Pressed
+	dec second_player_freeze
+
+
+
+	Check_Pressed:
 	;check if any key is being pressed
 	                                 MOV  AH,01h
 	                                 INT  16h
 	                                 JnZ   CHECK_MOVEMENT     	;ZF = 1, JZ -> Jump If Zero
-									RET
+									 jmp End_Moving
 	CHECK_MOVEMENT:     
 	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
@@ -244,26 +257,36 @@ MOVE_PLAYERS PROC FAR
 
 									 cmp AH,39h   ;this is space key
 									 jne Second_Attacked
+									 cmp first_player_freeze,0
+									 jg End_Moving					;if it is still freezed
 									 call FAR PTR First_Player_Attack
-									 RET
+									 jmp End_Moving
 
 									 Second_Attacked:
 									 cmp AH,1Ch  ;this is Enter
 									 jne first_moved
+									 cmp second_player_freeze,0
+									 jg End_Moving					;if it is still freezed
 									 call FAR PTR Second_Player_Attack
-									 RET
+									 jmp End_Moving
 
 									 First_moved:
 									cmp AH , 40h ;check if it is the second player( Scan Code in AH, if greater than 40h --> it must be second player)
 									JG Second_MOVED
+									 cmp first_player_freeze,0
+									 jg End_Moving					;if it is still freezed
 									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
-									RET
+									 jmp End_Moving
 
 									Second_MOVED:
+									 cmp second_player_freeze,0
+									 jg End_Moving					;if it is still freezed
 									call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
-									RET	
+									 jmp End_Moving
+
+			End_Moving:
+			RET
 				
-	;second player movement
 MOVE_PLAYERS ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
@@ -1336,11 +1359,46 @@ Draw_RED_LASER_LEFT_TO_RIGHT PROC FAR
 		INT 10h
 
 		cmp cx,Red_Laser_End_X 
-		jz END_Red_Laser_1
+		jz END_Draw_Red_Laser_1
 		inc cx
 		Sub dx,3
 		jmp Continue_Red_LASER_1
 		
+		End_Draw_Red_Laser_1:
+
+		mov cx,0ffffh
+		wait1: 
+			
+		LOOP wait1
+
+		mov cx,Red_Laser_Start_X
+		mov dx,first_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+
+	Clear_Red_Laser_1:
+		mov al,background_color
+		Int 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+		
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		cmp cx,Red_Laser_End_X 
+		jz END_Red_Laser_1
+		inc cx
+		Sub dx,3
+		jmp Clear_Red_LASER_1
+		
+
     END_Red_Laser_1:
 
 
@@ -1379,18 +1437,50 @@ Draw_RED_LASER_RIGHT_TO_LEFT PROC
 		INT 10h
 
 		cmp cx,Red_Laser_End_X 
-		jz END_Red_Laser_2
+		jz END_Draw_Red_Laser_2
 		dec cx
 		Sub dx,3
 		jmp Continue_Red_LASER_2
 		
+
+		END_Draw_Red_Laser_2:
+		mov cx,0ffffh
+		wait2: 
+			
+		LOOP wait2
+
+
+		mov cx,Red_Laser_Start_X
+		mov dx,first_player_Y
+		add dx,Player_Shooter_Y_Offset
+	
+		Clear_Red_LASER_2:
+
+		mov al,background_color
+		Int 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+		
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		cmp cx,Red_Laser_End_X 
+		jz END_Red_Laser_2
+		dec cx
+		Sub dx,3
+		jmp Clear_Red_LASER_2
+
+
+
+
     END_Red_Laser_2:
-
-
-
-
-
-
 
 	RET
 Draw_RED_LASER_RIGHT_TO_LEFT ENDP
@@ -1427,11 +1517,50 @@ Draw_BLUE_LASER_LEFT_TO_RIGHT PROC
 		INT 10h
 
 		cmp cx,Blue_Laser_End_X 
-		jz END_Blue_Laser_1
+		jz END_Draw_Blue_Laser_1
 		inc cx
 		Sub dx,3
 		jmp Continue_Blue_LASER_1
+
+
+		END_Draw_Blue_Laser_1:
+
+		mov cx,0ffffh
+		Wait_3: 
+			
+		LOOP Wait_3
+
+
+		mov cx,Blue_Laser_Start_X
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset
 		
+	Clear_Blue_LASER_1:
+
+		mov al,background_color
+		Int 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+		
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		cmp cx,Blue_Laser_End_X 
+		jz END_Blue_Laser_1
+		inc cx
+		Sub dx,3
+		jmp Clear_Blue_LASER_1
+
+
+
+
     END_Blue_Laser_1:
 
 
@@ -1470,11 +1599,49 @@ Draw_BLUE_LASER_RIGHT_TO_LEFT PROC
 		INT 10h
 
 		cmp cx,Blue_Laser_End_X 
-		jz END_Blue_Laser_2
+		jz END_Draw_Blue_Laser_2
 		dec cx
 		Sub dx,3
 		jmp Continue_Blue_LASER_2
+
+
+	End_Draw_Blue_Laser_2:
+	mov cx,0ffffh
+	Wait_4: 
 		
+	LOOP Wait_4
+
+		mov cx,Blue_Laser_Start_X
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+		
+	Clear_Blue_LASER_2:
+
+		mov al,background_color
+		Int 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		INC dx
+		mov al, background_color
+		INT 10h
+		
+		INC dx
+		mov al, background_color
+		INT 10h
+
+		cmp cx,Blue_Laser_End_X 
+		jz END_Blue_Laser_2
+		dec cx
+		Sub dx,3
+		jmp Clear_Blue_LASER_2
+
+
+
+
     END_Blue_Laser_2:
 
 

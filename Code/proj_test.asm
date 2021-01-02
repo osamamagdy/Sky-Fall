@@ -42,7 +42,7 @@ ENDM
 	first_player_health_X equ 0								 ;the starting upper left x coordinate of the first player's first heart
 	first_player_health_Y equ 0								 ;the starting upper left y coordinate of the first player's first heart
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
-
+	first_player_Freeze DW 0								 ;Duration for which the player is frozen
 
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
@@ -50,7 +50,7 @@ ENDM
     second_player_health_X equ 305							 ;the starting upper left x coordinate of the second player's first heart
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	second_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
-	
+	second_player_Freeze DW 0								 ;Duration for which the player is frozen
 
 	PLAYERS_WIDTH       equ  20								 ;the width of player's image
 	PLAYERS_HEIGHT      equ  25								 ;the height of player's image
@@ -61,22 +61,38 @@ ENDM
 	WID          DW  100d									 ;used by the draw barrier proc
 	LENMAX       DW  252d									 ;used by the draw barrier proc
 	WIDMAX       DW  152d									 ;used by the draw barrier proc
-	Initial_Y_Barrier1   EQU 124
-	Initial_Y_Barrier2 EQU 124
+	Initial_Y_Barrier1   EQU 140
+	Initial_Y_Barrier2 EQU 140
 	X_BARRIER1   DW  10									 	 ; xpos of barrier1
-	Y_BARRIER1   DW  124  									 ; ypos of barrier1
+	Y_BARRIER1   DW  140  									 ; ypos of barrier1
 
 	X_BARRIER2   DW  260 									 ; xpos of barrier2
 	Y_BARRIER2   DW  104									 ; ypos of barrier2
 
 
 	
-	;using in moving barriers as after each cycle (in which the barrier goes from the bottom of the page to the top of it)
-	; X_BARRIER1_Last_value DW 10
-	; X_BARRIER2_Last_value DW 260
-	; Y_BARRIER1_Last_value DW 124
-	; Y_BARRIER2_Last_value DW 104
+	;Laser Colors
+	RED EQU 39
+	Yellow EQU 14
+	Dark_Blue EQU 105
+	Light_Blue EQU 76
 
+
+	;Laser Target (The ARC Reactor of the suit)
+	Player_Reactor_Y_Offset EQU 16
+	Player_Reactor_Y_Size EQU 4
+	LASER_SIZE EQU 3
+
+
+	;Laser Launcher (Laser Shooters)
+	Player_Shooter_Y_Offset EQU 19
+
+	;Lasers Coordinates
+	Blue_Laser_Start_X DW ?
+	Blue_Laser_End_X DW ?
+	
+	Red_Laser_Start_X DW ?
+	Red_Laser_End_X DW ?
 
 
 
@@ -176,7 +192,6 @@ MAIN PROC FAR
 									CALL FAR PTR draw_p2
 									call FAR PTR DRAW_BARRIER1
 									call FAR PTR DRAW_BARRIER2
-
 									;;;;;;;;;;;;;Game Loop functions
 									CHECK_TIME:       
 
@@ -198,6 +213,7 @@ MAIN PROC FAR
 												jz Game_Over
 
 												CALL FAR PTR MOVE_PLAYERS
+												
 												;;;;;;;;;;;;;Flushing the keyboard buffer
 												mov ah,0ch
 												mov al,0
@@ -222,10 +238,22 @@ MOVE_PLAYERS PROC FAR
 	                                 JnZ   CHECK_MOVEMENT     	;ZF = 1, JZ -> Jump If Zero
 									RET
 	CHECK_MOVEMENT:     
-	;Read which key is being pressed (AL = ASCII character)
+	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
 	                                 INT  16h
 
+									 cmp AH,39h   ;this is space key
+									 jne Second_Attacked
+									 call FAR PTR First_Player_Attack
+									 RET
+
+									 Second_Attacked:
+									 cmp AH,1Ch  ;this is Enter
+									 jne first_moved
+									 call FAR PTR Second_Player_Attack
+									 RET
+
+									 First_moved:
 									cmp AH , 40h ;check if it is the second player( Scan Code in AH, if greater than 40h --> it must be second player)
 									JG Second_MOVED
 									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
@@ -237,6 +265,42 @@ MOVE_PLAYERS PROC FAR
 				
 	;second player movement
 MOVE_PLAYERS ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+;this will check for direction of the attack
+
+First_Player_Attack PROC 
+	mov ax,first_player_X
+	cmp ax,second_player_X
+	jGE Second_IS_IN_THE_LEFT_SIDE
+
+	call FAR PTR First_Attack_Left_TO_Right
+	RET
+	Second_IS_IN_THE_LEFT_SIDE:
+	Call far PTR First_Attack_Right_TO_Left
+
+	RET
+First_Player_Attack ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+;this will check for direction of the attack
+
+Second_Player_Attack PROC 
+	mov ax,Second_player_X
+	cmp ax,First_player_X
+	jGE First_IS_IN_THE_LEFT_SIDE
+
+	call FAR PTR Second_Attack_Left_TO_Right
+	RET
+	First_IS_IN_THE_LEFT_SIDE:
+	Call far PTR Second_Attack_Right_TO_Left
+
+	RET
+Second_Player_Attack ENDP
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 
@@ -622,6 +686,7 @@ CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 	                                 je   MOVE_FIRST_PLAYER_LEFT
 	                                 cmp  al,61h
 	                                 je   MOVE_FIRST_PLAYER_LEFT
+									 JMP Exit_FIRST_PLAYER_MOVEMENT           	
 	MOVE_FIRST_PLAYER_UP:            
 	                                 MOV  AX,PLAYERS_VELOCITY
 	                                 SUB  first_player_Y,AX
@@ -1238,6 +1303,648 @@ MOVE_BARRIERS PROC FAR
 							RET
 												
 MOVE_BARRIERS ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to draw the Red Laser from Left to Right (Just a colored line from start to end)
+
+Draw_RED_LASER_LEFT_TO_RIGHT PROC FAR
+
+		mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
+
+		mov cx,Red_Laser_Start_X
+		mov dx,first_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+	Continue_Red_LASER_1:
+
+		mov al,RED
+		Int 10h
+
+		INC dx
+		mov al, Yellow
+		INT 10h
+
+		INC dx
+		mov al, Yellow
+		INT 10h
+		
+		INC dx
+		mov al, Red
+		INT 10h
+
+		cmp cx,Red_Laser_End_X 
+		jz END_Red_Laser_1
+		inc cx
+		Sub dx,3
+		jmp Continue_Red_LASER_1
+		
+    END_Red_Laser_1:
+
+
+	RET
+Draw_RED_LASER_LEFT_TO_RIGHT ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to draw the Red Laser from Right to Left	(Just a colored line from start to end)
+
+
+Draw_RED_LASER_RIGHT_TO_LEFT PROC 
+	
+
+		mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
+
+		mov cx,Red_Laser_Start_X
+		mov dx,first_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+	Continue_Red_LASER_2:
+
+		mov al,RED
+		Int 10h
+
+		INC dx
+		mov al, Yellow
+		INT 10h
+
+		INC dx
+		mov al, Yellow
+		INT 10h
+		
+		INC dx
+		mov al, Red
+		INT 10h
+
+		cmp cx,Red_Laser_End_X 
+		jz END_Red_Laser_2
+		dec cx
+		Sub dx,3
+		jmp Continue_Red_LASER_2
+		
+    END_Red_Laser_2:
+
+
+
+
+
+
+
+	RET
+Draw_RED_LASER_RIGHT_TO_LEFT ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to draw the Blue Laser from Left to Right	(Just a colored line from start to end)
+
+
+Draw_BLUE_LASER_LEFT_TO_RIGHT PROC 
+	
+		mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
+
+		mov cx,Blue_Laser_Start_X
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+	Continue_Blue_LASER_1:
+
+		mov al,Dark_Blue
+		Int 10h
+
+		INC dx
+		mov al, Light_Blue
+		INT 10h
+
+		INC dx
+		mov al, Light_Blue
+		INT 10h
+		
+		INC dx
+		mov al, Dark_Blue
+		INT 10h
+
+		cmp cx,Blue_Laser_End_X 
+		jz END_Blue_Laser_1
+		inc cx
+		Sub dx,3
+		jmp Continue_Blue_LASER_1
+		
+    END_Blue_Laser_1:
+
+
+	RET
+Draw_BLUE_LASER_LEFT_TO_RIGHT ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to draw the Blue Laser from Right to Left	(Just a colored line from start to end)
+
+Draw_BLUE_LASER_RIGHT_TO_LEFT PROC 
+		
+		mov ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
+
+		mov cx,Blue_Laser_Start_X
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset
+		
+		
+	Continue_Blue_LASER_2:
+
+		mov al,Dark_Blue
+		Int 10h
+
+		INC dx
+		mov al, Light_Blue
+		INT 10h
+
+		INC dx
+		mov al, Light_Blue
+		INT 10h
+		
+		INC dx
+		mov al, Dark_Blue
+		INT 10h
+
+		cmp cx,Blue_Laser_End_X 
+		jz END_Blue_Laser_2
+		dec cx
+		Sub dx,3
+		jmp Continue_Blue_LASER_2
+		
+    END_Blue_Laser_2:
+
+
+	RET
+Draw_BLUE_LASER_RIGHT_TO_LEFT ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to make the first Player attack from Left to Right
+First_Attack_Left_TO_Right PROC FAR
+
+		;First we set the coordinates for the drawing 
+		mov ax,first_player_X
+		Add ax,PLAYERS_WIDTH
+		mov Red_Laser_Start_X,Ax
+
+		;git the first thing that will hit the laser
+		mov bx,WINDOW_WIDTH  					;BX will contain the end of the laser for the rest of the function
+		sub bx,2
+
+		;check the barriers, first ask if it is in the same Y Area, then ask for the X area
+		; 					   *----------------------------			|
+		; ------------*		   |	Barrier	At Right		|			|
+		; |At left:	|		   |							|			|	The window wall
+		; |	Beam 	|          |     						|			|
+		; ------------*		   |							|			|
+		; 					   *-----------------------------			|
+		Red_Laser1_Colli_First_Barrier:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier1
+		JL Red_Laser1_Colli_Second_Barrier    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Y_barrier1			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Red_Laser1_Colli_Second_Barrier	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		cmp ax,X_BARRIER1					;Check the Barrier Position relative to the Player
+		JGE Red_Laser1_Colli_Second_Barrier  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER1                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Red_Laser1_Colli_Second_Barrier  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+		;check the second barrier
+		Red_Laser1_Colli_Second_Barrier:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier2
+		JL Red_Laser1_Colli_Second_Player    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Y_barrier2			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Red_Laser1_Colli_Second_Player	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		cmp ax,X_BARRIER2					;Check the Barrier Position relative to the Player
+		JGE Red_Laser1_Colli_Second_Player  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER2                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Red_Laser1_Colli_Second_Player  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+
+		;check the blue player
+
+		Red_Laser1_Colli_Second_Player:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Second_player_Y
+		JL Finish_First_Attack_Left_TO_Right    ;all the Y of the laser < starting Y of the Second Player--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Second_player_Y			   
+		add cx,PLAYERS_HEIGHT    ;now cx has the last Y of the Player
+		cmp dx,cx
+		JG Finish_First_Attack_Left_TO_Right	;all the Y of the laser > ending Y of the Player--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		cmp ax,second_player_X					;Check the Second Player Position relative to the Player
+		JGE Finish_First_Attack_Left_TO_Right  ;The Second Player is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,Second_player_X                   ;when reached here, it means that the Second Player Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Finish_First_Attack_Left_TO_Right  ;if this new AX(second_player_X) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+		mov second_player_Freeze,25				;make the second player freeze
+
+
+
+
+Finish_First_Attack_Left_TO_Right:
+
+mov Red_Laser_End_X,bx
+Call Draw_RED_LASER_LEFT_TO_RIGHT
+RET
+First_Attack_Left_TO_Right ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to make the first Player attack from Left to Right
+First_Attack_Right_TO_Left PROC FAR
+
+		;First we set the coordinates for the drawing 
+		mov ax,first_player_X
+		mov Red_Laser_Start_X,Ax
+
+		;git the first thing that will hit the laser
+		mov bx,2  					;BX will contain the end of the laser for the rest of the function
+
+		;check the barriers, first ask if it is in the same Y Area, then ask for the X area
+		;	 	|		   ----------------------------*
+		;The 	|		   |	Barrier	At Left			|	*------------		
+		;Window	|		   |							|	|At Right:	|			
+		;Wall	|          |     						|	|	Beam 	| 		
+		; 	 	|		   |							|	*------------		
+		; 	 	|		   -----------------------------*
+		Red_Laser2_Colli_First_Barrier:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier1
+		JL Red_Laser2_Colli_Second_Barrier    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Y_barrier1			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Red_Laser2_Colli_Second_Barrier	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		mov dx,X_Barrier1
+		Add dx,BARRIER_HORIZONTAL_SIZE		;now dx has the right most X_Position of the Barrier
+		cmp ax,DX							;Check the Barrier Position relative to the Player
+		JLE Red_Laser2_Colli_Second_Barrier  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER1                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		ADD ax,BARRIER_HORIZONTAL_SIZE
+		cmp ax,bx							
+		JL Red_Laser2_Colli_Second_Barrier  ;if this new AX(X_Barrier) < BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+		;check the second barrier
+		Red_Laser2_Colli_Second_Barrier:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier2
+		JL Red_Laser2_Colli_Second_Player    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Y_barrier2			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Red_Laser2_Colli_Second_Player	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		mov dx,X_BARRIER2
+		Add dx,BARRIER_HORIZONTAL_SIZE		;now dx has the right most X_Position of the Barrier
+		cmp ax,DX							;Check the Barrier Position relative to the Player
+		JLE Red_Laser2_Colli_Second_Player  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER2                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		ADD ax,BARRIER_HORIZONTAL_SIZE
+		cmp ax,bx							
+		JL Red_Laser2_Colli_Second_Player  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+
+		;check the blue player
+
+		Red_Laser2_Colli_Second_Player:
+		mov dx,First_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the Red Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Second_player_Y
+		JL Finish_First_Attack_Right_TO_Left    ;all the Y of the laser < starting Y of the Second Player--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the Red Laser Start Y
+		mov cx,Second_player_Y			   
+		add cx,PLAYERS_HEIGHT    ;now cx has the last Y of the Player
+		cmp dx,cx
+		JG Finish_First_Attack_Right_TO_Left	;all the Y of the laser > ending Y of the Player--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Red_Laser_Start_X
+		mov dx,second_player_X
+		ADD dx,PLAYERS_WIDTH
+		cmp ax,DX								;Check the Second Player Position relative to the Player
+		JLE Finish_First_Attack_Right_TO_Left  ;The Second Player is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,Second_player_X                   ;when reached here, it means that the Second Player Will block my way. But is it the first thing to block ?
+		add ax,PLAYERS_WIDTH
+		cmp ax,bx							
+		JL Finish_First_Attack_Right_TO_Left  ;if this new AX(second_player_X) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+		mov second_player_Freeze,25				;make the second player freeze
+
+
+
+
+Finish_First_Attack_Right_TO_Left:
+
+mov Red_Laser_End_X,bx
+Call Draw_RED_LASER_Right_TO_Left
+RET
+First_Attack_Right_TO_Left ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to make the Second Player attack from Left to Right
+Second_Attack_Left_TO_Right PROC FAR
+
+		;First we set the coordinates for the drawing 
+		mov ax,Second_player_X
+		Add ax,PLAYERS_WIDTH
+		mov Blue_Laser_Start_X,Ax
+
+		;git the first thing that will hit the laser
+		mov bx,WINDOW_WIDTH  					;BX will contain the end of the laser for the rest of the function
+		sub bx,2
+
+		;check the barriers, first ask if it is in the same Y Area, then ask for the X area
+		; 					   *----------------------------			|
+		; ------------*		   |	Barrier	At Right		|			|
+		; |At left:	|		   |							|			|	The window wall
+		; |	Beam 	|          |     						|			|
+		; ------------*		   |							|			|
+		; 					   *-----------------------------			|
+		Blue_Laser1_Colli_First_Barrier:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier1
+		JL Blue_Laser1_Colli_Second_Barrier    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,Y_barrier1			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Blue_Laser1_Colli_Second_Barrier	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		cmp ax,X_BARRIER1					;Check the Barrier Position relative to the Player
+		JGE Blue_Laser1_Colli_Second_Barrier  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER1                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Blue_Laser1_Colli_Second_Barrier  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+		;check the second barrier
+		Blue_Laser1_Colli_Second_Barrier:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier2
+		JL Blue_Laser1_Colli_first_Player    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,Y_barrier2			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Blue_Laser1_Colli_first_Player	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		cmp ax,X_BARRIER2					;Check the Barrier Position relative to the Player
+		JGE Blue_Laser1_Colli_First_Player  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER2                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Blue_Laser1_Colli_First_Player  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+
+		;check the BLUE player
+
+		Blue_Laser1_Colli_First_Player:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,First_player_Y
+		JL Finish_Second_Attack_Left_TO_Right    ;all the Y of the laser < starting Y of the Second Player--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,first_player_Y			   
+		add cx,PLAYERS_HEIGHT    ;now cx has the last Y of the Player
+		cmp dx,cx
+		JG Finish_Second_Attack_Left_TO_Right	;all the Y of the laser > ending Y of the Player--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		cmp ax,First_player_X					;Check the Second Player Position relative to the Player
+		JGE Finish_Second_Attack_Left_TO_Right  ;The Second Player is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,first_player_X                   ;when reached here, it means that the Second Player Will block my way. But is it the first thing to block ?
+		cmp ax,bx							
+		JG Finish_Second_Attack_Left_TO_Right  ;if this new AX(second_player_X) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+		mov First_player_Freeze,25				;make the first player freeze
+
+
+
+
+Finish_Second_Attack_Left_TO_Right:
+
+mov Blue_Laser_End_X,bx
+Call Draw_Blue_LASER_LEFT_TO_RIGHT
+RET
+Second_Attack_Left_TO_Right ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;This function is to make the Second Player attack from Left to Right
+Second_Attack_Right_TO_Left PROC FAR
+
+		;First we set the coordinates for the drawing 
+		mov ax,Second_player_X
+		mov Blue_Laser_Start_X,Ax
+
+		;git the first thing that will hit the laser
+		mov bx,2  					;BX will contain the end of the laser for the rest of the function
+
+		;check the barriers, first ask if it is in the same Y Area, then ask for the X area
+		;	 	|		   ----------------------------*
+		;The 	|		   |	Barrier	At Left			|	*------------		
+		;Window	|		   |							|	|At Right:	|			
+		;Wall	|          |     						|	|	Beam 	| 		
+		; 	 	|		   |							|	*------------		
+		; 	 	|		   -----------------------------*
+		Blue_Laser2_Colli_First_Barrier:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier1
+		JL Blue_Laser2_Colli_Second_Barrier    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,Y_barrier1			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Blue_Laser2_Colli_Second_Barrier	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		mov dx,X_Barrier1
+		Add dx,BARRIER_HORIZONTAL_SIZE		;now dx has the right most X_Position of the Barrier
+		cmp ax,DX							;Check the Barrier Position relative to the Player
+		JLE Blue_Laser2_Colli_Second_Barrier  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER1                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		ADD ax,BARRIER_HORIZONTAL_SIZE
+		cmp ax,bx							
+		JL Blue_Laser2_Colli_Second_Barrier  ;if this new AX(X_Barrier) < BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+		;check the second barrier
+		Blue_Laser2_Colli_Second_Barrier:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,Y_barrier2
+		JL Blue_Laser2_Colli_First_Player    ;all the Y of the laser < starting Y of the Barrier--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,Y_barrier2			   
+		add cx,BARRIER_VERTICAL_SIZE    ;now cx has the last Y of the Barrier
+		cmp dx,cx
+		JG Blue_Laser2_Colli_First_Player	;all the Y of the laser > ending Y of the Barrier--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		mov dx,X_BARRIER2
+		Add dx,BARRIER_HORIZONTAL_SIZE		;now dx has the right most X_Position of the Barrier
+		cmp ax,DX							;Check the Barrier Position relative to the Player
+		JLE Blue_Laser2_Colli_First_Player  ;The Barrier is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,X_BARRIER2                   ;when reached here, it means that the Barrier Will block my way. But is it the first thing to block ?
+		ADD ax,BARRIER_HORIZONTAL_SIZE
+		cmp ax,bx							
+		JL Blue_Laser2_Colli_First_Player  ;if this new AX(X_Barrier) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+
+
+
+
+
+		;check the BLUE player
+
+		Blue_Laser2_Colli_First_Player:
+		mov dx,Second_player_Y
+		add dx,Player_Shooter_Y_Offset ;now the dx has the BLUE Laser Start Y
+		add dx,LASER_SIZE                      ;dx --->the laser ending Y
+		cmp dx,First_player_Y
+		JL Finish_Second_Attack_Right_TO_Left    ;all the Y of the laser < starting Y of the Second Player--> No collision
+		
+		sub dx,LASER_SIZE					   ;now the dx has the BLUE Laser Start Y
+		mov cx,First_player_Y			   
+		add cx,PLAYERS_HEIGHT    ;now cx has the last Y of the Player
+		cmp dx,cx
+		JG Finish_Second_Attack_Right_TO_Left	;all the Y of the laser > ending Y of the Player--> No collision
+
+		;;;;If it reached here then, there will be a collision in the Y,check for X
+		mov ax, Blue_Laser_Start_X
+		mov dx,First_player_X
+		ADD dx,PLAYERS_WIDTH
+		cmp ax,DX								;Check the Second Player Position relative to the Player
+		JLE Finish_Second_Attack_Right_TO_Left  ;The Second Player is Behind the player (if player is collided with the barrier we won't fire )
+		mov ax,First_player_X                   ;when reached here, it means that the Second Player Will block my way. But is it the first thing to block ?
+		add ax,PLAYERS_WIDTH
+		cmp ax,bx							
+		JL Finish_Second_Attack_Right_TO_Left  ;if this new AX(second_player_X) > BX ---> Then it's not the first thing to Block my way
+
+		mov bx,ax
+		mov first_player_Freeze,25				;make the first player freeze
+
+
+
+
+Finish_Second_Attack_Right_TO_Left:
+
+mov Blue_Laser_End_X,bx
+Call Draw_Blue_LASER_Right_TO_Left
+RET
+Second_Attack_Right_TO_Left ENDP
 
 
 

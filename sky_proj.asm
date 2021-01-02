@@ -44,6 +44,7 @@ ENDM
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 
+	First_Player_Name  DB 10,?,10 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -51,7 +52,9 @@ ENDM
 	first_player_health_Y equ 0								 ;the starting upper left y coordinate of the first player's first heart
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
+	First_Is_Collided DB 0									 ;Boolean Variable To check if the player is colliding
 
+	Second_Player_Name  DB 10,?,10 dup('$')
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
@@ -59,11 +62,14 @@ ENDM
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	second_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	second_player_Freeze DW 0								 ;Duration for which the player is frozen
-
+	Second_Is_Collided DB 0									 ;Boolean Variable To check if the player is colliding
+	
 	PLAYERS_WIDTH       equ  20								 ;the width of player's image
 	PLAYERS_HEIGHT      equ  25								 ;the height of player's image
 	PLAYERS_VELOCITY    DW  04h
-
+	Initial_Freeze EQU 20									 ;The freezing time of player after being attacked
+	Initial_Imunity EQU 20									 ;This is the immunity to the player fter being hit
+	
 	;VARIABLES USED IN THE PROCS OF DRAWING THE BARRIER
 	LEN       	 DW  100d									 ;used by the draw barrier proc
 	WID          DW  100d									 ;used by the draw barrier proc
@@ -189,6 +195,8 @@ ENDM
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
     END_GAME DB '*To End the Program Press ESC $'
+	Name_Message_1 DB '*Enter the first player name,Press Enter to porceed $'
+	Name_Message_2 DB '*Enter the second player name, Press Enter to porceed $'
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Game over screen;;;;;;;;;;;;;;;;;;;;;;;;;;;
 imgW equ 200
@@ -368,6 +376,8 @@ MAIN PROC FAR
                                         jmp CHECK
 
                                 startgame:
+									CALL Far PTR Take_Game_Data
+
 	                                CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
 	                                call FAR PTR draw_background ;draw the background of the Game window
 									call FAR PTR draw_h1
@@ -480,6 +490,8 @@ MOVE_PLAYERS PROC FAR
 									 jne Second_Attacked
 									 cmp first_player_freeze,0
 									 jg End_Moving					;if it is still freezed
+									 cmp First_Is_Collided,1		;If he is colliding, he cannot attack
+									 JE End_Moving
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
@@ -488,6 +500,8 @@ MOVE_PLAYERS PROC FAR
 									 jne first_moved
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
+									 cmp Second_Is_Collided,1		;If he is colliding, he cannot attack
+									 JE End_Moving
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
@@ -1162,6 +1176,7 @@ Update_Players ENDP
 
 
 first_player_barriers_coli PROC FAR
+									mov First_Is_Collided,0
                     ;check for collision between player1 and barriers(1,2)
       ;CHECK_FOR_COLLISION_p1_b1:          
 	                           ;first_player_x+players_width<x_barrier1
@@ -1186,7 +1201,8 @@ first_player_barriers_coli PROC FAR
 	                                 CMP  first_player_Y,AX
 	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
 
-							;check if he has immunity to collision
+							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+									mov First_Is_Collided,1
 									cmp first_player_health_immunity , 0
 									JZ Decrease_first_health_1
 									JNZ Donot_Decrease_first_health_1 
@@ -1223,7 +1239,8 @@ CHECK_FOR_COLLISION_p1_b2:
 	                                 JNL      EXIT_PLAYERS_barriers_col         	;No collision will happen
 
 
-							;check if he has immunity to collision
+							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+									mov First_Is_Collided,1
 									cmp first_player_health_immunity , 0
 									JZ Decrease_first_health_2
 									JNZ Donot_Decrease_first_health_2 
@@ -1242,7 +1259,7 @@ first_player_barriers_coli ENDP
 
 second_player_barriers_coli PROC FAR
                     ;;check for collision between player2 and barriers(1,2)
-
+									mov Second_Is_Collided,0
 
  CHECK_FOR_COLLISION_p2_b1:          
 	                           ;second_player_x+players_width<x_barrier1
@@ -1268,7 +1285,8 @@ second_player_barriers_coli PROC FAR
 	                                 JNL  CHECK_FOR_COLLISION_p2_b2         	;No collision will happen
 
 
-							;check if he has immunity to collision
+							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+									mov Second_Is_Collided,1
 									cmp second_player_health_immunity , 0
 									JZ Decrease_second_health_1
 									JNZ Donot_Decrease_second_health_1 
@@ -1305,7 +1323,8 @@ second_player_barriers_coli PROC FAR
 
 
 
-							;check if he has immunity to collision
+							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+									mov Second_Is_Collided,1
 									cmp second_player_health_immunity , 0
 									JZ Decrease_second_health_2
 									JNZ Donot_Decrease_second_health_2 
@@ -2363,6 +2382,55 @@ Game_over_screen PROC
 	                                 jnz  fill_over
     ret
 Game_over_screen ENDP
+
+;This function is to take Players name Before entering the game
+
+Take_Game_Data PROC FAR
+	
+				CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
+
+
+				mov ah,0
+				mov al,02
+				int 10h     ;this to choose text mode
+
+				mov ah,2	
+				mov dx,01113h
+				int 10h		;Position the Cursor
+				PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
+				Add DH,2						
+				INT 10H							;Position the Cursor below it by two rows
+				
+				Take_First_name:				;Start taking the first name untill it reaches the maximum/or the player presses enter
+
+
+								mov AH,0AH
+								mov dx,offset First_Player_Name
+								int 21h
+
+
+				mov ah,2	
+				mov dx,01113h
+				add dh,4h
+				int 10h		;Position the Cursor
+				PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
+				Add DH,2						
+				INT 10H							;Position the Cursor below it by two rows
+				
+				Take_Second_name:				;Start taking the Second name untill it reaches the maximum/or the player presses enter
+
+
+								mov AH,0AH
+								mov dx,offset Second_Player_Name
+								int 21h
+
+
+
+
+					RET
+Take_Game_Data ENDP
+
+
 
 
 END MAIN

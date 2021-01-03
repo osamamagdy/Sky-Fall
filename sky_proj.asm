@@ -192,7 +192,7 @@ ENDM
     ;MAIN MENU
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
-    END_GAME DB '*To End the Program Press ESC $'
+    END_GAME_mess DB '*To End the Program Press ESC $'
     levelone DB  '*please press 1 for level 1 $'
     leveltwo DB  '*please press 2 for level 2 $'
     Name_Message_1 DB '*Enter the first player name,Press Enter to porceed $'
@@ -337,152 +337,26 @@ first_player_wins db 'First Player Wins'
 
 second_player_wins db 'Second player wins'
 
+GAME_OVER_mess db 'Press ESC Key to Return to main menu $'
+
+Goodbye_mess db 'Goodbye *^-^* $'
+
 level DB 0
 .code
 MAIN PROC FAR
 	                                mov  ax,@data
 	                                mov  ds ,ax
-                                      MOV ES, AX
-                                    mov ah,00
-                                    mov al,02
-                                    int 10h
-
-                                    mov ah,2
-                                    mov dx,01113h
-                                    int 10h
-                                  
-                                    PRINT_Messages CHAT
-                                    ADD DH,2
-                                    INT 10h
-                                    PRINT_Messages Sky_GAME
-                                    ADD DH,2
-                                    INT 10h
-                                    PRINT_Messages END_GAME
-                                  
-
-
-                    ;;;;;;;;;;;;NEED TO ADD F1 for CHAT MODULE;;;;;;;;;;
-                                    CHECK:
-                                        mov ah,0
-                                        int 16h
-
-                                        cmp aH,3CH   ;if f2 pressed start game
-                                        JZ Which_level
-                                        JNZ EndGame
-
- Which_level:
-                                   mov ah,00
-                                    mov al,02
-                                    int 10h
-                                    mov ah,2
-                                    mov dx,01113h
-                                    int 10h
-                                    PRINT_Messages levelone
-                                     ADD DH,2
-                                    INT 10h
-                                    PRINT_Messages leveltwo
-
-                                    mov ah,0
-                                    int 16h
-                                    mov level,al
-                                    jmp startgame
- 
- EndGame:
-                                        CMP AH,01  
-                                        JZ Game_Over
-
-                                        jmp CHECK
-
-                                startgame:
-								    CALL Far PTR Take_Game_Data
-	                                CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-	                                call FAR PTR draw_background ;draw the background of the Game window
-									call FAR PTR draw_h1
-									call FAR PTR draw_h2
-									CALL FAR PTR draw_p1
-									CALL FAR PTR draw_p2
-									call FAR PTR DRAW_BARRIER1
-									call FAR PTR DRAW_BARRIER2
-									;;;;;;;;;;;;;Game Loop functions
-									CHECK_TIME:       
-
-												MOV  AH,2Ch                          	;get the system time
-												INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
-												CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
-												JE   CHECK_TIME                      	;if it is the same, check again
-												;if it's different, then draw, move, etc.
-												MOV  TIME_AUX,DL                         ;update time
-
-                                                cmp level,49    
-                                                JZ level1
-												
-                                                level2:
-                                                CALL FAR PTR MOVE_BARRIERS_2
-
-                                                level1:                
-												CALL FAR PTR MOVE_BARRIERS
-                                               
-
-												;check if health is zero, Game Over
-												mov ax,first_player_health
-												cmp ax,0
-												jz Game_Over
-
-												;check if health is zero, Game Over
-												mov ax,second_player_health
-												cmp ax,0
-												jz Game_Over
-
-												CALL FAR PTR MOVE_PLAYERS
-												
-												;;;;;;;;;;;;;Flushing the keyboard buffer
-												mov ah,0ch
-												mov al,0
-												int 21h												
-	                                 JMP  CHECK_TIME                      	;after everything checks time again		
-	                                 
-									Game_Over: 
-	                                CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-                                   ; call FAR PTR draw_background
-                                    call far PTR Game_over_screen
-                                     mov ax,second_player_health
-								    cmp ax,0
-                                    jz first_wins
-                                    mov ax,first_player_health
-                                    cmp ax,0
-                                    jz second_wins
-                                    jmp final
-                                        first_wins:
-                                        mov first_player_X,30 
-                                        mov first_player_y,90
-						                call FAR PTR draw_p1
-                                        MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
-                                        MOV AH, 13H ; WRITE THE STRING
-                                        MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-                                        XOR BH,BH ; VIDEO PAGE = 0
-                                        MOV BL, 0eh ;YELLOW
-                                        MOV CX, 17 ; LENGTH OF THE STRING
-                                        MOV DH, 12 ;ROW TO PLACE STRING
-                                        MOV DL, 12 ; COLUMN TO PLACE STRING
-                                        INT 10H
-                                        jmp final
-                                        second_wins:
-                                        mov second_player_X,30
-                                        mov second_player_Y,90
-						                call FAR PTR draw_p2
-                                        MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
-                                        MOV AH, 13H ; WRITE THE STRING
-                                        MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-                                        XOR BH,BH ; VIDEO PAGE = 0
-                                        MOV BL, 01h ;BLUE
-                                        MOV CX, 20 ; LENGTH OF THE STRING
-                                        MOV DH, 12 ;ROW TO PLACE STRING
-                                        MOV DL, 12 ; COLUMN TO PLACE STRING
-                                        INT 10H
-                                        jmp final
-                                     
-                                        final:
-									 RET
+                                    MOV ES, AX
+								    CALL Far PTR Take_User_Data
+									Call FAR PTR MAIN_MENU
+									Call FAR PTR CLEAR_SCREEN
+									mov ah,2
+									mov dx,090fh
+									int 10h
+									PRINT_Messages Goodbye_mess
+									mov ah,0
+									int 16h
+									RET
 MAIN ENDP
 	
 
@@ -506,7 +380,7 @@ MOVE_PLAYERS PROC FAR
 	;check if any key is being pressed
 	                                 MOV  AH,01h
 	                                 INT  16h
-	                                 JnZ   CHECK_MOVEMENT     	;ZF = 1, JZ -> Jump If Zero
+	                                 JnZ  CHECK_MOVEMENT     	;ZF = 1, JZ -> Jump If Zero
 									 jmp End_Moving
 	CHECK_MOVEMENT:     
 	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
@@ -2523,10 +2397,10 @@ Game_over_screen PROC
     ret
 Game_over_screen ENDP
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;This function is to take Players name Before entering the game
-Take_Game_Data PROC FAR
+Take_User_Data PROC FAR
 	
     
 	
@@ -2589,6 +2463,180 @@ Take_Game_Data PROC FAR
                                                             mov dx,offset Second_Player_Name
                                                             int 21h
                                     RET
-Take_Game_Data ENDP
+Take_User_Data ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+Main_menu PROC FAR
+
+				FIRST_MENU:
+					mov ah,00
+					mov al,02
+					int 10h
+
+					mov ah,2
+					mov dx,01113h
+					int 10h
+					
+					PRINT_Messages CHAT
+					ADD DH,2
+					INT 10h
+					PRINT_Messages Sky_GAME
+					ADD DH,2
+					INT 10h
+					PRINT_Messages END_GAME_mess
+					
+					Check:
+
+							mov ah,0
+							int 16h
+							; cmp AH,3BH		;if f1 is pressed, go to chat module
+							; JE CHAT_Module
+							cmp AH,3CH		;if f2 is pressed, start the game
+							JE Which_level
+							Cmp AH,01
+							JE End_Game
+							jmp check
+
+					Which_level:
+                                   mov ah,00
+                                    mov al,02
+                                    int 10h
+                                    mov ah,2
+                                    mov dx,01113h
+                                    int 10h
+                                    PRINT_Messages levelone
+                                     ADD DH,2
+                                    INT 10h
+                                    PRINT_Messages leveltwo
+
+                                    mov ah,0
+                                    int 16h
+									cmp al,'1'
+									JE Level_is_Valid
+									cmp al,'2'
+									jne Which_level
+					Level_is_Valid:
+                                    mov level,al
+									CALL FAR PTR Start_Game
+									jmp First_menu
+
+					End_Game :
+							RET
+Main_menu ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Start_Game PROC FAR
+
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				call FAR PTR draw_background ;draw the background of the Game window
+				call FAR PTR draw_h1
+				call FAR PTR draw_h2
+				CALL FAR PTR draw_p1
+				CALL FAR PTR draw_p2
+				call FAR PTR DRAW_BARRIER1
+				call FAR PTR DRAW_BARRIER2
+
+			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				CHECK_TIME:       
+
+							MOV  AH,2Ch                          	;get the system time
+							INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
+							CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
+							JE   CHECK_TIME                      	;if it is the same, check again
+							;if it's different, then draw, move, etc.
+							MOV  TIME_AUX,DL                         ;update time
+
+							cmp level,49    
+							JZ level1
+							
+							level2:
+							CALL FAR PTR MOVE_BARRIERS_2
+
+							level1:                
+							CALL FAR PTR MOVE_BARRIERS
+							
+
+							;check if health is zero, Game Over
+							mov ax,first_player_health
+							cmp ax,0
+							jz Game_Over
+
+							;check if health is zero, Game Over
+							mov ax,second_player_health
+							cmp ax,0
+							jz Game_Over
+
+							CALL FAR PTR MOVE_PLAYERS
+							
+							;;;;;;;;;;;;;Flushing the keyboard buffer
+							mov ah,0ch
+							mov al,0
+							int 21h												
+					JMP  CHECK_TIME                      	;after everything checks time again		
+
+			;;;;;;;;;;;GAME ENDING FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				Game_Over: 
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				; call FAR PTR draw_background
+				call far PTR Game_over_screen
+					mov ax,second_player_health
+				cmp ax,0
+				jz first_wins
+				mov ax,first_player_health
+				cmp ax,0
+				jz second_wins
+				jmp final
+					first_wins:
+					mov first_player_X,30 
+					mov first_player_y,90
+					call FAR PTR draw_p1
+					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 0eh ;YELLOW
+					MOV CX, 17 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+					jmp final
+					second_wins:
+					mov second_player_X,30
+					mov second_player_Y,90
+					call FAR PTR draw_p2
+					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 01h ;BLUE
+					MOV CX, 20 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+
+				final:
+                mov ah,2        
+                mov dx,1100h
+                int 10h                ;Position the Cursor
+				ADD DH,3
+				PRINT_Messages GAME_OVER_mess
+				mov ah,0
+				int 16h
+				cmp AH,01
+				JNE Final
+
+	RET
+Start_Game ENDP
+
+
+
+
+
+
+
+
+
 
 END MAIN

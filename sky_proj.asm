@@ -2715,6 +2715,7 @@ Start_Game PROC FAR
 				int 16h
 				cmp AH,01
 				JNE Final
+			    Call FAR PTR Take_User_Data
 
 	RET
 Start_Game ENDP

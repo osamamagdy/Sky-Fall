@@ -193,10 +193,10 @@ ENDM
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
     END_GAME_mess DB '*To End the Program Press ESC $'
-    levelone DB  '*please press 1 for level 1 $'
-    leveltwo DB  '*please press 2 for level 2 $'
-    Name_Message_1 DB '*Enter the first player name,Press Enter to porceed $'
-    Name_Message_2 DB '*Enter the second player name, Press Enter to porceed $'
+    levelone DB  '* press 1 for level 1 $'
+    leveltwo DB  '* press 2 for level 2 $'
+    Name_Message_1 DB '*Enter the RED player name,Press Enter to porceed $'
+    Name_Message_2 DB '*Enter the BLUE player name, Press Enter to porceed $'
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Game over screen;;;;;;;;;;;;;;;;;;;;;;;;;;;
 imgW equ 200
 imgH equ 26
@@ -340,6 +340,10 @@ second_player_wins db 'Second player wins'
 GAME_OVER_mess db 'Press ESC Key to Return to main menu $'
 
 Goodbye_mess db 'Goodbye *^-^* $'
+
+Invalid_Start_msg db 'PlayerName must start with a letter and maxsize=15 $'
+Invalid_Start_msg2 db 'Invalid PlayerName ! $'
+
 
 level DB 0
 .code
@@ -2396,7 +2400,9 @@ Game_over_screen PROC
 	                                 jnz  fill_over
     ret
 Game_over_screen ENDP
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;This function is to take Players name Before entering the game
 Take_User_Data PROC FAR
 	
@@ -2500,17 +2506,21 @@ Greater_than_90_2:
                                                             CMP Second_Player_Name[2],122
                                                             JLE Temp_End
                                                             JG Wrong_start 
+                                                                                                                    
 
 Wrong_start:
-                           call FAR PTR CLEAR_SCREEN
-                            mov ah,0
-                            mov al,02
-                            int 10h     ;this to choose text mode
                             mov ah,2        
-                            mov dx,01113h
-                            int 10h                ;Position the Cursor
+                            mov dx,1620h
+                            int 10h ;Position the Cursor
                             PRINT_Messages Invalid_Start_msg2
-                            Jmp start 
+                            ;;;;;delay;;;;;;
+                                mov cx, 05h ;HIGH WORD.
+                                mov dx, 2420h ;LOW WORD.
+                                mov ah, 86h ;WAIT.
+                                int 15h
+
+                            Jmp Start
+
 
 
 
@@ -2583,6 +2593,30 @@ Main_menu ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Start_Game PROC FAR
+                ;;SOME INITIALIZATIONS AS the player can play the game multiple times
+                MOV  TIME_AUX,0                
+                MOV PRE_POSITION_X,0          							
+                MOV 	PRE_POSITION_Y,0      						
+                MOV 	PRE_POSITION_X2,0     						
+                MOV 	PRE_POSITION_Y2,0     						
+                MOV 	first_player_X,20     								 
+                MOV 	first_player_Y,50     								 
+                MOV 	first_player_health,5                                							 
+                MOV 	first_player_health_immunity,0 						
+                MOV 	first_player_Freeze,0 							 
+                MOV     First_Is_Collided,0                                    
+                MOV 	second_player_X,270      								
+                MOV 	SECOND_PLAYER_Y,50      								
+                MOV 	second_player_health,5                            
+                MOV 	second_player_health_immunity,0 				
+                MOV 	second_player_Freeze,0 
+                MOV     Second_Is_Collided,0                              					
+                MOV	    X_BARRIER1,10    							 	 
+                MOV	    Y_BARRIER1,140      									 
+                MOV	    X_BARRIER2,260     									 
+                MOV	    Y_BARRIER2,104    
+				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
 				call FAR PTR draw_background ;draw the background of the Game window
@@ -2684,14 +2718,5 @@ Start_Game PROC FAR
 
 	RET
 Start_Game ENDP
-
-
-
-
-
-
-
-
-
 
 END MAIN

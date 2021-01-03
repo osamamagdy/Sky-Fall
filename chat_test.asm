@@ -5,6 +5,8 @@
 
 	first_cursor_x db 0
 	first_cursor_y db 0
+    second_cursor_x db 0
+	second_cursor_y db 81
     letter db ?
     is_enter db ?
     is_scroll db ?
@@ -19,41 +21,60 @@ main PROC far
     mov ah,0
     mov al,3
     int 10h
+   call draw_line
 
-    call initializing
-    call draw_line
-    call start_sending
+   Mov AH,0 ;initializing COM port
+   ;;MOV DX,1 ;;COM2
+   MOV AL,0c3H ; BaudRate=4800&&No_Parity&&one_stop_bit&&8_bit_word_len.
+   INT 14H
+
+AGAIN: 
+   MOV AH,01
+   INT 16h ;int16h/ah,01 to check if any key is pressed
+   ;if there is a key pressed zf=0 else zf=1
+   JZ NEXT
+   MOV AH,0
+   INT 16h;int16h/ah,0 to check if any key is pressed
+   ;and get the key in al
+   CMP AL,1BH ;the key was esc key
+   JE EXIT
+   CALL check_enter
+   CALL BackSpace
+   MOV DL,AL
+   MOV AH,02
+   INT 21H
+   MOV AH,1;int 14H/Ah,1 to send a character (Al=char)
+  ;; MOV DX,01
+   INT 14H
+
+
+NEXT: MOV AH,03 ;int14h/ah,03 to get com2 status(AH=status com2)
+      ;;MOV DX,01 ; com2
+      INT 14H ;status= D7 D6 ...... D0
+      AND AH,01 ;By this Ah=D0 as all other bits become 0 as we and then with 0
+      CMP AH,01 ;check D0 and see if there is a character
+      JNE AGAIN ;no recieved data go back and monitor the keyboard
+      Mov AH,02 ;INT14H/AH,02 RECIEVED A CHAR (AL=CHAR)
+     ;; MOV DX,01 
+      INT 14H
+       ;;TO DISPLAY RECIEVED CHAR USING INT 21H/AH,02
+      MOV DL,AL
+      MOV AH,02
+      INT 21H
+      jmp AGAIN
+
+
+EXIT:
+    MOV AH,4CH
+    INT 21h
+
+  
+  
     
 
 main ENDP
 
-initializing PROC
-    ;Set Divisor Latch Access Bit
-    mov dx,3fbh ; Line Control Register
-    mov al,10000000b ;Set Divisor Latch Access Bit
-    out dx,al ;Out it
 
-    ; Set LSB byte of the Baud Rate Divisor Latch register.
-    mov dx,3f8h
-    mov al,0ch
-    out dx,al
-
-    ; Set MSB byte of the Baud Rate Divisor Latch register.
-    mov dx,3f9h
-    mov al,00h
-    out dx,al
-
-    ; Set port configuration
-    mov dx,3fbh
-    mov al,00011011b
-    ; 0:Access to Receiver buffer, Transmitter buffer
-    ; 0:Set Break disabled
-    ; 011:Even Parity
-    ; 0:One Stop Bit
-    ; 11:8bits
-    out dx,al
-    ret  
-initializing ENDP
 
  ;description
 draw_line PROC
@@ -69,43 +90,7 @@ draw_line ENDP
 
 
 
-start_sending PROC
-    test1:
-    ;wait for key press
-    CHECK: mov ah,1
-        int 16h
-        jz CHECK
-        jmp get_key_pressed
 
-        get_key_pressed:
-            mov ah,0
-            int 16h
-            mov letter,al  ;letter holds the char required to be sent
-
-            ;check if key pressed is enter key
-            call check_enter
-            cmp is_enter,1
-            jz here
-        
-
-            ;set cursor
-            mov ah,2 
-            mov bh,0
-            mov dl,first_cursor_x
-            mov dh,first_cursor_y
-            int 10h
-
-            mov ah,2
-            mov dl,letter
-            int 21h
-           
-            call get_new_position
-            here:
-            mov is_enter,0
-
-    jmp test1
-
-start_sending ENDP
 
 
 check_enter PROC
@@ -180,4 +165,10 @@ update_line PROC
    
     ret
 update_line ENDP
+Backspace proc
+cmp Al,08
+
+ret
+BackSpace ENDP
 END main
+

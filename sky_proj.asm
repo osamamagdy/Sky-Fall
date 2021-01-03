@@ -43,7 +43,7 @@ ENDM
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
- First_Player_Name  DB 10,?,10 dup('$')
+ First_Player_Name  DB 15,?,15 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -52,7 +52,7 @@ ENDM
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
     First_Is_Collided DB 0                                   ;Boolean Variable To check if the player is colliding
-    Second_Player_Name  DB 10,?,10 dup('$')
+    Second_Player_Name  DB 15,?,15 dup('$')
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
@@ -2396,13 +2396,11 @@ Game_over_screen PROC
 	                                 jnz  fill_over
     ret
 Game_over_screen ENDP
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;This function is to take Players name Before entering the game
 Take_User_Data PROC FAR
 	
-    
+    Start:
 	
                             CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
 	
@@ -2420,11 +2418,16 @@ Take_User_Data PROC FAR
                             mov dx,01113h
 	
                             int 10h                ;Position the Cursor
-	
+                            
+                            PRINT_Messages Invalid_Start_msg
+                            
+                            Add DH,2                                                
+                            INT 10H
+
+                          
                             PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
 	
                             Add DH,2                                                
-	
                             INT 10H                                                        ;Position the Cursor below it by two rows
 	
                             
@@ -2434,12 +2437,30 @@ Take_User_Data PROC FAR
 	
 	
                                                             mov AH,0AH
-	
                                                             mov dx,offset First_Player_Name
-	
                                                             int 21h
+
+                                                            CMP First_Player_Name[2],65
+                                                            JGE GREATER_Than_65
+                                                            JL Wrong_start
+                                                            GREATER_Than_65:
+                                                            CMP First_Player_Name[2],90
+                                                            JLE Between_65_90_or_97_122
+                                                            JG Greater_than_90
+                                                            
+
+Greater_than_90:
+                                                            CMP First_Player_Name[2],97
+                                                            JGE GREATER_Than_97
+                                                            JL Wrong_start
+                                                            GREATER_Than_97:
+                                                            CMP First_Player_Name[2],122
+                                                            JLE Between_65_90_or_97_122
+                                                            JG Wrong_start                                                    
 	
 	
+	Between_65_90_or_97_122:
+    
 	
                             mov ah,2        
 	
@@ -2447,8 +2468,8 @@ Take_User_Data PROC FAR
 	
                             add dh,4h
 	
-                            int 10h                ;Position the Cursor
-	
+                            int 10h    
+                        
                             PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
 	
                             Add DH,2                                                
@@ -2462,6 +2483,40 @@ Take_User_Data PROC FAR
                                                             mov AH,0AH
                                                             mov dx,offset Second_Player_Name
                                                             int 21h
+                                                            CMP Second_Player_Name[2],65
+                                                            JGE GREATER_Than_65_2
+                                                            JL Wrong_start
+                                                            GREATER_Than_65_2:
+                                                            CMP Second_Player_Name[2],90
+                                                            JLE Temp_End
+                                                            JG Greater_than_90_2
+                                                            
+
+Greater_than_90_2:
+                                                            CMP Second_Player_Name[2],97
+                                                            JGE GREATER_Than_97_2
+                                                            JL Wrong_start
+                                                            GREATER_Than_97_2:
+                                                            CMP Second_Player_Name[2],122
+                                                            JLE Temp_End
+                                                            JG Wrong_start 
+
+Wrong_start:
+                           call FAR PTR CLEAR_SCREEN
+                            mov ah,0
+                            mov al,02
+                            int 10h     ;this to choose text mode
+                            mov ah,2        
+                            mov dx,01113h
+                            int 10h                ;Position the Cursor
+                            PRINT_Messages Invalid_Start_msg2
+                            Jmp start 
+
+
+
+
+Temp_End:
+
                                     RET
 Take_User_Data ENDP
 

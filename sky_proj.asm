@@ -43,8 +43,7 @@ ENDM
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
-
-	First_Player_Name  DB 10,?,10 dup('$')
+ First_Player_Name  DB 10,?,10 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -52,9 +51,8 @@ ENDM
 	first_player_health_Y equ 0								 ;the starting upper left y coordinate of the first player's first heart
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
-	First_Is_Collided DB 0									 ;Boolean Variable To check if the player is colliding
-
-	Second_Player_Name  DB 10,?,10 dup('$')
+    First_Is_Collided DB 0                                   ;Boolean Variable To check if the player is colliding
+    Second_Player_Name  DB 10,?,10 dup('$')
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
@@ -62,14 +60,14 @@ ENDM
 	second_player_health_Y equ 0							 ;the starting upper left y coordinate of the second player's first heart
 	second_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	second_player_Freeze DW 0								 ;Duration for which the player is frozen
-	Second_Is_Collided DB 0									 ;Boolean Variable To check if the player is colliding
-	
+
 	PLAYERS_WIDTH       equ  20								 ;the width of player's image
 	PLAYERS_HEIGHT      equ  25								 ;the height of player's image
 	PLAYERS_VELOCITY    DW  04h
-	Initial_Freeze EQU 20									 ;The freezing time of player after being attacked
-	Initial_Imunity EQU 20									 ;This is the immunity to the player fter being hit
+    Second_Is_Collided DB 0                                ;Boolean Variable To check if the player is colliding
+	Initial_Freeze EQU 20                                  ;The freezing time of player after being attacked
 	
+    Initial_Imunity EQU 20                                 ;This is the immunity to the player fter being hit
 	;VARIABLES USED IN THE PROCS OF DRAWING THE BARRIER
 	LEN       	 DW  100d									 ;used by the draw barrier proc
 	WID          DW  100d									 ;used by the draw barrier proc
@@ -195,9 +193,10 @@ ENDM
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
     END_GAME DB '*To End the Program Press ESC $'
-	Name_Message_1 DB '*Enter the first player name,Press Enter to porceed $'
-	Name_Message_2 DB '*Enter the second player name, Press Enter to porceed $'
-
+    levelone DB  '*please press 1 for level 1 $'
+    leveltwo DB  '*please press 2 for level 2 $'
+    Name_Message_1 DB '*Enter the first player name,Press Enter to porceed $'
+    Name_Message_2 DB '*Enter the second player name, Press Enter to porceed $'
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Game over screen;;;;;;;;;;;;;;;;;;;;;;;;;;;
 imgW equ 200
 imgH equ 26
@@ -338,7 +337,7 @@ first_player_wins db 'First Player Wins'
 
 second_player_wins db 'Second player wins'
 
-
+level DB 0
 .code
 MAIN PROC FAR
 	                                mov  ax,@data
@@ -368,16 +367,34 @@ MAIN PROC FAR
                                         int 16h
 
                                         cmp aH,3CH   ;if f2 pressed start game
-                                        JZ startgame
+                                        JZ Which_level
+                                        JNZ EndGame
 
+ Which_level:
+                                   mov ah,00
+                                    mov al,02
+                                    int 10h
+                                    mov ah,2
+                                    mov dx,01113h
+                                    int 10h
+                                    PRINT_Messages levelone
+                                     ADD DH,2
+                                    INT 10h
+                                    PRINT_Messages leveltwo
+
+                                    mov ah,0
+                                    int 16h
+                                    mov level,al
+                                    jmp startgame
+ 
+ EndGame:
                                         CMP AH,01  
                                         JZ Game_Over
 
                                         jmp CHECK
 
                                 startgame:
-									CALL Far PTR Take_Game_Data
-
+								    CALL Far PTR Take_Game_Data
 	                                CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
 	                                call FAR PTR draw_background ;draw the background of the Game window
 									call FAR PTR draw_h1
@@ -394,8 +411,18 @@ MAIN PROC FAR
 												CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
 												JE   CHECK_TIME                      	;if it is the same, check again
 												;if it's different, then draw, move, etc.
-												MOV  TIME_AUX,DL                     	;update time
+												MOV  TIME_AUX,DL                         ;update time
+
+                                                cmp level,49    
+                                                JZ level1
+												
+                                                level2:
+                                                CALL FAR PTR MOVE_BARRIERS_2
+
+                                                level1:                
 												CALL FAR PTR MOVE_BARRIERS
+                                               
+
 												;check if health is zero, Game Over
 												mov ax,first_player_health
 												cmp ax,0
@@ -490,8 +517,8 @@ MOVE_PLAYERS PROC FAR
 									 jne Second_Attacked
 									 cmp first_player_freeze,0
 									 jg End_Moving					;if it is still freezed
-									 cmp First_Is_Collided,1		;If he is colliding, he cannot attack
-									 JE End_Moving
+									 cmp First_Is_Collided,1                ;If he is colliding, he cannot attack
+                                     JE End_Moving
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
@@ -500,8 +527,8 @@ MOVE_PLAYERS PROC FAR
 									 jne first_moved
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
-									 cmp Second_Is_Collided,1		;If he is colliding, he cannot attack
-									 JE End_Moving
+									 cmp Second_Is_Collided,1                ;If he is colliding, he cannot attack
+                                     JE End_Moving
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
@@ -1176,9 +1203,9 @@ Update_Players ENDP
 
 
 first_player_barriers_coli PROC FAR
-									mov First_Is_Collided,0
                     ;check for collision between player1 and barriers(1,2)
       ;CHECK_FOR_COLLISION_p1_b1:          
+	  mov First_Is_Collided,0
 	                           ;first_player_x+players_width<x_barrier1
 	                                 MOV  AX,first_player_X               	
 	                                 ADD  AX,PLAYERS_WIDTH
@@ -1200,9 +1227,9 @@ first_player_barriers_coli PROC FAR
 	                                 ADD  AX, BARRIER_VERTICAL_SIZE
 	                                 CMP  first_player_Y,AX
 	                                 JNL   CHECK_FOR_COLLISION_p1_b2         	;No collision will happen
-
-							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
-									mov First_Is_Collided,1
+                                    ;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+                                    mov First_Is_Collided,1
+							;check if he has immunity to collision
 									cmp first_player_health_immunity , 0
 									JZ Decrease_first_health_1
 									JNZ Donot_Decrease_first_health_1 
@@ -1238,9 +1265,9 @@ CHECK_FOR_COLLISION_p1_b2:
 	                                 CMP  first_player_Y,AX
 	                                 JNL      EXIT_PLAYERS_barriers_col         	;No collision will happen
 
-
-							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
-									mov First_Is_Collided,1
+                                     ;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+                                    mov First_Is_Collided,1
+							;check if he has immunity to collision
 									cmp first_player_health_immunity , 0
 									JZ Decrease_first_health_2
 									JNZ Donot_Decrease_first_health_2 
@@ -1259,9 +1286,10 @@ first_player_barriers_coli ENDP
 
 second_player_barriers_coli PROC FAR
                     ;;check for collision between player2 and barriers(1,2)
-									mov Second_Is_Collided,0
 
- CHECK_FOR_COLLISION_p2_b1:          
+
+ CHECK_FOR_COLLISION_p2_b1:       
+  mov Second_Is_Collided,0   
 	                           ;second_player_x+players_width<x_barrier1
 	                                 MOV  AX,second_player_X               	
 	                                 ADD  AX,PLAYERS_WIDTH
@@ -1284,9 +1312,9 @@ second_player_barriers_coli PROC FAR
 	                                 CMP  second_player_Y,AX
 	                                 JNL  CHECK_FOR_COLLISION_p2_b2         	;No collision will happen
 
-
-							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
-									mov Second_Is_Collided,1
+    ;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+                                    mov Second_Is_Collided,1
+							;check if he has immunity to collision
 									cmp second_player_health_immunity , 0
 									JZ Decrease_second_health_1
 									JNZ Donot_Decrease_second_health_1 
@@ -1323,8 +1351,9 @@ second_player_barriers_coli PROC FAR
 
 
 
-							;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
-									mov Second_Is_Collided,1
+    ;There is collision , set his state to collided and check if he has immunity to collision before decreasing health
+                                    mov Second_Is_Collided,1
+							;check if he has immunity to collision
 									cmp second_player_health_immunity , 0
 									JZ Decrease_second_health_2
 									JNZ Donot_Decrease_second_health_2 
@@ -1468,7 +1497,10 @@ ERASE_RECTANGLE proc FAR
 ERASE_RECTANGLE ENDP
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;MOVING BARRIER 1,2 for level_1
 ;MOVING BARRIER 1,2 
 MOVE_BARRIERS PROC FAR
 												;; DELETE THE OLD BARRIER1 BEFORE DRAWING IT IN THE NEW POSITION
@@ -1543,11 +1575,11 @@ MOVE_BARRIERS PROC FAR
 														
 																	X2_REACH_MAX:
 																				ADD X_BARRIER2,200	
-																				JMP X_TEMP_LABEL
+																				JMP X_TEMP_LABEL1
 
 																	X2_DONT_REACH_MAX:
 																					SUB X_BARRIER2,50	;;260-->210-->...-->10
-																					JMP X_TEMP_LABEL
+																					JMP X_TEMP_LABEL1
 																						
 
 												BARRIERS_2_DIDNT_REACH_TOP:		;moving barriers up
@@ -1555,7 +1587,7 @@ MOVE_BARRIERS PROC FAR
 												
 												
 
-												X_TEMP_LABEL:		
+												X_TEMP_LABEL1:		
 												CALL first_player_barriers_coli
 												CALL second_player_barriers_coli
 												CALL draw_p1
@@ -1566,6 +1598,114 @@ MOVE_BARRIERS PROC FAR
 							RET
 												
 MOVE_BARRIERS ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;MOVING BARRIER 1,2 for level_2
+MOVE_BARRIERS_2 PROC FAR
+												;; DELETE THE OLD BARRIER1 BEFORE DRAWING IT IN THE NEW POSITION
+												MOV AX,X_BARRIER1
+												MOV LEN,AX	
+												ADD AX,BARRIER_HORIZONTAL_SIZE
+												MOV LENMAX,AX	
+												MOV AX,Y_BARRIER1
+												MOV WID,AX
+												ADD AX,BARRIER_VERTICAL_SIZE	
+												MOV WIDMAX,AX
+												CALL  ERASE_RECTANGLE
+
+												;; DELETE THE OLD BARRIER1 BEFORE DRAWING IT IN THE NEW POSITION
+												MOV AX,X_BARRIER2
+												MOV LEN,AX	
+												ADD AX,BARRIER_HORIZONTAL_SIZE
+												MOV LENMAX,AX	
+												MOV AX,Y_BARRIER2
+												MOV WID,AX
+												ADD AX,BARRIER_VERTICAL_SIZE	
+												MOV WIDMAX,AX
+												CALL  ERASE_RECTANGLE
+
+
+												MOV AX,x_barrier1
+												MOV PRE_POSITION_X,AX
+												MOV AX,Y_barrier1
+												MOV PRE_POSITION_Y,AX
+
+												MOV AX,x_barrier2
+												MOV PRE_POSITION_X2,AX
+												MOV AX,Y_barrier2
+												MOV PRE_POSITION_Y2,AX
+											
+												CHECK_BARRIER1_TOP_2:			;check if barrier1 reach top of page(before reaching health bar)
+																	CMP Y_BARRIER1 ,24 			                            
+																	JLE BARRIER_1_REACHED_TOP_2
+																	JG BARRIERS_1_DIDNT_REACH_TOP_2
+
+												BARRIER_1_REACHED_TOP_2: 		;If reached top of page return it to the bottom
+																	 Mov Y_BARRIER1,Initial_Y_Barrier1
+																	 ;Change the X-position of the Barrier
+																
+
+												BARRIERS_1_DIDNT_REACH_TOP_2:		;moving barriers up
+																	SUB Y_Barrier1,1		;5 steps by which the barriers are moving
+
+
+                                                                    	check_x1_2:
+																				CMP X_BARRIER1,260;10<=x_barrier_1<= 260  
+																				JGE X1_REACH_MAX_2 
+																				JL X1_DONT_REACH_MAX_2                  
+														
+																	X1_REACH_MAX_2:
+																				SUB X_BARRIER1,200
+																				JMP CHECK_BARRIER2_TOP_2
+
+																	X1_DONT_REACH_MAX_2:
+																					ADD X_BARRIER1,2  ;;10-->60-->120.....--->260
+																					JMP CHECK_BARRIER2_TOP_2
+
+												
+												CHECK_BARRIER2_TOP_2: 		;check if barrier2 reach top of page(before reaching health bar)
+																	CMP Y_BARRIER2 ,24 			                            
+																	JLE BARRIER_2_REACHED_TOP_2
+																	JG BARRIERS_2_DIDNT_REACH_TOP_2
+
+												BARRIER_2_REACHED_TOP_2: 
+																	 Mov Y_BARRIER2,Initial_Y_Barrier2
+																	 ;Randomize the X-position of the Barrier
+																
+																						
+
+												BARRIERS_2_DIDNT_REACH_TOP_2:		;moving barriers up
+																	SUB Y_Barrier2,2		;5 steps by which the barriers are moving
+												
+													check_x2_2:
+																			CMP X_BARRIER2,10;10<=x_barrier_1<= 260  
+																			JLE X2_REACH_MAX_2 
+																			JG X2_DONT_REACH_MAX_2                  
+														
+																	X2_REACH_MAX_2:
+																				ADD X_BARRIER2,200	
+																				JMP X_TEMP_LABEL_2
+
+																	X2_DONT_REACH_MAX_2:
+																					SUB X_BARRIER2,1	;;260-->210-->...-->10
+																					JMP X_TEMP_LABEL_2
+
+
+
+												X_TEMP_LABEL_2:		
+												CALL first_player_barriers_coli
+												CALL second_player_barriers_coli
+												CALL draw_p1
+												CALL draw_p2
+												CALL DRAW_BARRIER1
+												CALL DRAW_BARRIER2
+
+							RET
+												
+MOVE_BARRIERS_2 ENDP
+
+
 
 
 
@@ -2383,54 +2523,72 @@ Game_over_screen PROC
     ret
 Game_over_screen ENDP
 
-;This function is to take Players name Before entering the game
 
+
+;;This function is to take Players name Before entering the game
 Take_Game_Data PROC FAR
 	
-				CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
-
-
-				mov ah,0
-				mov al,02
-				int 10h     ;this to choose text mode
-
-				mov ah,2	
-				mov dx,01113h
-				int 10h		;Position the Cursor
-				PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
-				Add DH,2						
-				INT 10H							;Position the Cursor below it by two rows
-				
-				Take_First_name:				;Start taking the first name untill it reaches the maximum/or the player presses enter
-
-
-								mov AH,0AH
-								mov dx,offset First_Player_Name
-								int 21h
-
-
-				mov ah,2	
-				mov dx,01113h
-				add dh,4h
-				int 10h		;Position the Cursor
-				PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
-				Add DH,2						
-				INT 10H							;Position the Cursor below it by two rows
-				
-				Take_Second_name:				;Start taking the Second name untill it reaches the maximum/or the player presses enter
-
-
-								mov AH,0AH
-								mov dx,offset Second_Player_Name
-								int 21h
-
-
-
-
-					RET
+    
+	
+                            CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
+	
+	
+	
+                            mov ah,0
+	
+                            mov al,02
+	
+                            int 10h     ;this to choose text mode
+	
+	
+                            mov ah,2        
+	
+                            mov dx,01113h
+	
+                            int 10h                ;Position the Cursor
+	
+                            PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
+	
+                            Add DH,2                                                
+	
+                            INT 10H                                                        ;Position the Cursor below it by two rows
+	
+                            
+	
+                            Take_First_name:                                ;Start taking the first name untill it reaches the maximum/or the player presses enter
+	
+	
+	
+                                                            mov AH,0AH
+	
+                                                            mov dx,offset First_Player_Name
+	
+                                                            int 21h
+	
+	
+	
+                            mov ah,2        
+	
+                            mov dx,01113h
+	
+                            add dh,4h
+	
+                            int 10h                ;Position the Cursor
+	
+                            PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
+	
+                            Add DH,2                                                
+	
+                            INT 10H                                                        ;Position the Cursor below it by two rows
+	
+                            
+	
+                            Take_Second_name:                                ;Start taking the Second name untill it reaches the maximum/or the player presses enter
+	
+                                                            mov AH,0AH
+                                                            mov dx,offset Second_Player_Name
+                                                            int 21h
+                                    RET
 Take_Game_Data ENDP
-
-
-
 
 END MAIN

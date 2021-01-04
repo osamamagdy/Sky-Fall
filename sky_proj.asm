@@ -1,3 +1,4 @@
+
 MACRO_CLEAR_PLAYER MACRO X,Y
 
 						mov pre_position_x,x
@@ -43,7 +44,7 @@ ENDM
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
- First_Player_Name  DB 15,?,15 dup('$')
+   First_Player_Name  DB '16','?',16 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -52,7 +53,7 @@ ENDM
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
     First_Is_Collided DB 0                                   ;Boolean Variable To check if the player is colliding
-    Second_Player_Name  DB 15,?,15 dup('$')
+    Second_Player_Name  DB '16','?',16 dup('$')
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
@@ -333,9 +334,9 @@ img DB 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 1
 x_position dw 50
 y_position dw 30
 
-first_player_wins db 'First Player Wins' 
+first_player_wins db 'First Player Wins$' 
 
-second_player_wins db 'Second player wins'
+second_player_wins db 'Second player wins$'
 
 GAME_OVER_mess db 'Press ESC Key to Return to main menu $'
 
@@ -344,6 +345,7 @@ Goodbye_mess db 'Goodbye *^-^* $'
 Invalid_Start_msg db 'PlayerName must start with a letter and maxsize=15 $'
 Invalid_Start_msg2 db 'Invalid PlayerName ! $'
 
+CHOOSE_COLOR DB 0H ;USE THIS VARIABLE TO CHOOSE THE COLOR OF PRINT IN THE PRINT NAME OF PLAYER IN GAME
 
 level DB 0
 .code
@@ -2627,6 +2629,29 @@ Start_Game PROC FAR
 				call FAR PTR DRAW_BARRIER1
 				call FAR PTR DRAW_BARRIER2
 
+				;; print name
+				MOV AH,2
+				MOV DX,000DH
+				INT 10H
+				MOV DI,OFFSET First_Player_Name
+				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
+				INC DI
+				INC DI
+				MOV CHOOSE_COLOR,0           ;;PUT 0 IN THIS VARIABLE TO PRINT IN RED FOR THE RED FIRST PLAYER
+				CALL FAR PTR PRINT_STRING
+
+				MOV AH,2
+				MOV DX,010DH
+				INT 10H
+				MOV DI,OFFSET Second_Player_Name
+				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
+				INC DI
+				INC DI
+				MOV CHOOSE_COLOR,1          ;;PUT 1 IN THIS VARIABLE TO PRINT IN BLUE FOR THE BLUE FIRST PLAYER
+				CALL FAR PTR PRINT_STRING
+
+
+				;;END PRINT NAME 
 			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				CHECK_TIME:       
 
@@ -2700,7 +2725,7 @@ Start_Game PROC FAR
 					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
 					XOR BH,BH ; VIDEO PAGE = 0
 					MOV BL, 01h ;BLUE
-					MOV CX, 20 ; LENGTH OF THE STRING
+					MOV CX, 18 ; LENGTH OF THE STRING
 					MOV DH, 12 ;ROW TO PLACE STRING
 					MOV DL, 12 ; COLUMN TO PLACE STRING
 					INT 10H
@@ -2719,5 +2744,39 @@ Start_Game PROC FAR
 
 	RET
 Start_Game ENDP
+
+;prints one characgter in graphics mode
+ PRINT_CHAR proc                         ;; PUT IN CHOOSE_COLOR 0H TO PRINT IN RED,ANY VALUE TO PRINT IN BLUE TO PRINT IN BLUE
+		MOV BL,CHOOSE_COLOR
+        mov  al, [di] 
+		CMP BL,0  
+		JE RED_CHAR
+		MOV BL,01H
+		JMP CONTINUE_PRINT_CHAR_FUN
+		RED_CHAR:   
+        mov  bl, 04h  ;Color is red
+		CONTINUE_PRINT_CHAR_FUN:
+        mov  bh, 0    ;Display page
+        mov  ah, 0Eh  ;Teletype
+        int  10h
+        RET
+PRINT_CHAR endp 
+;PRINTS STRING IN GRAPHICS MODE , NEED TO PUT THE OFFSET IN DI BEFORE CALLING AND ALSO CALIBRATE THE CURSOR POSITON
+ PRINT_STRING proc
+        PRINT_AGAIN_STRING:
+        MOV AL,[DI]
+        CMP AL,'$'
+        JZ END_PRINT_STRING
+        
+        CALL FAR PTR PRINT_CHAR
+        INC DI
+        JMP PRINT_AGAIN_STRING
+
+        END_PRINT_STRING:
+
+        RET
+
+
+PRINT_STRING endp 
 
 END MAIN

@@ -1,0 +1,6 @@
+mount m  e:\Sky-Fall\Chat_module_folder
+m:
+serial1 = directserial realport:COM1
+masm chat.asm
+link chat
+chat.exe

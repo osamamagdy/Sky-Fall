@@ -8,6 +8,8 @@
     letter db ?
     is_enter db ?
     is_scroll db ?
+    VALUE db ?
+
 .code
 
 ;description
@@ -67,6 +69,31 @@ draw_line PROC
     ret
 draw_line ENDP
 
+RECEIVE_VALUE PROC
+;Check that Data is Ready
+mov dx , 3FDH ; Line Status Register
+CHK: in al , dx
+test al , 1
+JZ CHK ;Not Ready
+;If Ready read the VALUE in Receive data register
+mov dx , 03F8H
+in al , dx
+mov VALUE , al
+ret
+RECEIVE_VALUE ENDP
+
+SEND_VALUE PROC
+;Check that Transmitter Holding Register is Empty
+mov dx , 3FDH ; Line Status Register
+AGAIN: In al , dx ;Read Line Status
+test al , 00100000b
+JZ AGAIN ;Not empty
+;If empty put the VALUE in Transmit data register
+mov dx , 3F8H ; Transmit data register
+mov al,letter
+out dx , al
+RET
+SEND_VALUE ENDP
 
 
 start_sending PROC
@@ -81,13 +108,14 @@ start_sending PROC
             mov ah,0
             int 16h
             mov letter,al  ;letter holds the char required to be sent
+           
 
             ;check if key pressed is enter key
             call check_enter
             cmp is_enter,1
             jz here
         
-
+            CALL   SEND_VALUE
             ;set cursor
             mov ah,2 
             mov bh,0

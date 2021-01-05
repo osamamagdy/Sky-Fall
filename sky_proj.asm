@@ -2616,7 +2616,8 @@ Start_Game PROC FAR
                 MOV	    X_BARRIER1,10    							 	 
                 MOV	    Y_BARRIER1,140      									 
                 MOV	    X_BARRIER2,260     									 
-                MOV	    Y_BARRIER2,104    
+                MOV	    Y_BARRIER2,104   
+				
 				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -2652,6 +2653,23 @@ Start_Game PROC FAR
 
 
 				;;END PRINT NAME 
+
+				;;clear names if the player wants to reset the game
+				mov di,offset First_Player_Name 
+				add di,2
+				mov si,offset Second_Player_Name
+				add si,2
+				mov cx,15
+				reset_names:
+				
+				mov [di],'$'
+				mov [si],'$'
+				inc di
+				inc si
+				loop reset_names
+
+				
+
 			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				CHECK_TIME:       
 

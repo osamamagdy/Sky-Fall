@@ -4,8 +4,8 @@
 .data
 
 	first_cursor_x db 0
-	first_cursor_y db 0
-    letter db ?
+	first_cursor_y db 13
+    VALUE_TO_SEND db ?
     is_enter db ?
     is_scroll db ?
     VALUE db ?
@@ -17,19 +17,30 @@ main PROC far
 
     mov ax,@data
     mov ds,ax
+    MOV ES,AX
 
     mov ah,0
     mov al,3
     int 10h
 
+
+    mov ah,2 
+    mov dl,first_cursor_x
+    mov dh,first_cursor_y
+    int 10h
+
+
     call initializing
     call draw_line
-    call start_sending
+    WHILE1:
+    call READ_FROM_KEYBOAD
+    call RECEIVE_VALUE
+    jmp WHILE1
     
 
 main ENDP
 
-initializing PROC
+initializing PROC                 ;;GOOD PROC
     ;Set Divisor Latch Access Bit
     mov dx,3fbh ; Line Control Register
     mov al,10000000b ;Set Divisor Latch Access Bit
@@ -58,7 +69,7 @@ initializing PROC
 initializing ENDP
 
  ;description
-draw_line PROC
+draw_line PROC                        ;;GOOD PROC 
  	mov ax,0b800h ;text mode 
 	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
 	mov es,ax
@@ -69,20 +80,10 @@ draw_line PROC
     ret
 draw_line ENDP
 
-RECEIVE_VALUE PROC
-;Check that Data is Ready
-mov dx , 3FDH ; Line Status Register
-CHK: in al , dx
-test al , 1
-JZ CHK ;Not Ready
-;If Ready read the VALUE in Receive data register
-mov dx , 03F8H
-in al , dx
-mov VALUE , al
-ret
-RECEIVE_VALUE ENDP
 
-SEND_VALUE PROC
+
+SEND_VALUE PROC                                 ;; GOOD PROC
+
 ;Check that Transmitter Holding Register is Empty
 mov dx , 3FDH ; Line Status Register
 AGAIN: In al , dx ;Read Line Status
@@ -90,32 +91,28 @@ test al , 00100000b
 JZ AGAIN ;Not empty
 ;If empty put the VALUE in Transmit data register
 mov dx , 3F8H ; Transmit data register
-mov al,letter
+mov al,VALUE_TO_SEND
 out dx , al
 RET
 SEND_VALUE ENDP
 
 
-start_sending PROC
-    test1:
-    ;wait for key press
-    CHECK: mov ah,1
-        int 16h
-        jz CHECK
-        jmp get_key_pressed
+PRINT_RECEIVED PROC
+    
+   
 
-        get_key_pressed:
-            mov ah,0
-            int 16h
-            mov letter,al  ;letter holds the char required to be sent
-           
+        ;get_key_pressed:
+            ; mov ah,0
+            ; int 16h
+            ;mov VALUE,al  ; holds the char required to be sent
+            mov al,VALUE
 
             ;check if key pressed is enter key
             call check_enter
             cmp is_enter,1
             jz here
         
-            CALL   SEND_VALUE
+            ;CALL   SEND_VALUE
             ;set cursor
             mov ah,2 
             mov bh,0
@@ -124,17 +121,33 @@ start_sending PROC
             int 10h
 
             mov ah,2
-            mov dl,letter
+            mov dl,VALUE
             int 21h
            
             call get_new_position
             here:
             mov is_enter,0
 
-    jmp test1
+            ret
 
-start_sending ENDP
+PRINT_RECEIVED ENDP
 
+
+RECEIVE_VALUE PROC                            ;; GOOD PROC
+;Check that Data is Ready
+mov dx , 3FDH ; Line Status Register
+ in al , dx
+test al , 1
+JZ END_RECEIVE_VALUE ;Not Ready
+;If Ready read the VALUE in Receive data register
+mov dx , 03F8H
+in al , dx
+mov VALUE , al
+CALL  PRINT_RECEIVED
+
+END_RECEIVE_VALUE:
+ret
+RECEIVE_VALUE ENDP
 
 check_enter PROC
     cmp al,0dh
@@ -142,7 +155,7 @@ check_enter PROC
     ; cmp first_cursor_y,11
     ; jz 
     enter_action:
-        cmp first_cursor_y,11
+        cmp first_cursor_y,24
         jz call_scroll1
         inc first_cursor_y
         mov first_cursor_x,0
@@ -162,12 +175,12 @@ check_enter ENDP
 ;description
 
 get_new_position PROC
-    cmp first_cursor_x,75
+    cmp first_cursor_x,75d
     jz new_line 
        inc first_cursor_x      
        jmp return
     new_line:
-      cmp first_cursor_y,11
+      cmp first_cursor_y,23d
       jz call_scroll
       inc first_cursor_y            ; move to new line
       mov first_cursor_x,0
@@ -190,7 +203,7 @@ check_scroll PROC
     int 10h
     call update_line
     mov first_cursor_x,0
-    MOV first_cursor_Y,11
+    MOV first_cursor_Y,24h
     ret
 check_scroll ENDP
 
@@ -208,4 +221,22 @@ update_line PROC
    
     ret
 update_line ENDP
+
+
+
+READ_FROM_KEYBOAD PROC
+    MOV AH,1
+    INT 16H
+    JZ NO_KEY_PRESSED
+    MOV AH,0 
+    INT 16H
+    MOV VALUE_TO_SEND,AL
+    CALL   SEND_VALUE
+    JMP END_READ_FROM_KEYBOARD
+    NO_KEY_PRESSED:
+    MOV VALUE_TO_SEND,0
+    END_READ_FROM_KEYBOARD:
+    
+RET
+READ_FROM_KEYBOAD ENDP
 END main

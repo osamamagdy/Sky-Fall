@@ -19,6 +19,8 @@ main PROC far
     mov ds,ax
     MOV ES,AX
 
+
+    ;80*25
     mov ah,0
     mov al,3
     int 10h
@@ -33,6 +35,10 @@ main PROC far
     call initializing
     call draw_line
     WHILE1:
+    mov ah,2 
+    mov dl,first_cursor_x
+    mov dh,first_cursor_y
+    int 10h
     call READ_FROM_KEYBOAD
     call RECEIVE_VALUE
     jmp WHILE1
@@ -180,7 +186,7 @@ get_new_position PROC
        inc first_cursor_x      
        jmp return
     new_line:
-      cmp first_cursor_y,23d
+      cmp first_cursor_y,24d
       jz call_scroll
       inc first_cursor_y            ; move to new line
       mov first_cursor_x,0
@@ -196,14 +202,15 @@ get_new_position ENDP
 check_scroll PROC
     mov ax,0601h
     mov bh,00
-    mov ch,0
+    mov ch,13d     ;; begin to scroll from y=13
 	mov cl,0
-	mov dh,12
-	mov dl,79
+    
+	mov dh,23d
+	mov dl,75d      
     int 10h
     call update_line
     mov first_cursor_x,0
-    MOV first_cursor_Y,24h
+    MOV first_cursor_Y,23d
     ret
 check_scroll ENDP
 

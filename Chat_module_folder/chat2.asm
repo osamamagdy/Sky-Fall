@@ -198,7 +198,7 @@ check_scroll PROC
     mov bh,00
     mov ch,0
 	mov cl,0
-	mov dh,12
+	mov dh,11
 	mov dl,79
     int 10h
     call update_line

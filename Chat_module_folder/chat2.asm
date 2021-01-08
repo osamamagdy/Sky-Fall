@@ -4,7 +4,7 @@
 .data
 
 	first_cursor_x db 0
-	first_cursor_y db 0
+	first_cursor_y db 1
     VALUE_TO_SEND db ?
     is_enter db ?
     is_scroll db ?
@@ -12,7 +12,9 @@
 
 
     second_cursor_x db 0
-	second_cursor_y db 13
+	second_cursor_y db 14
+     Second_Player_Name  DB '16','?','Second_Player_Name$'
+    First_Player_Name  DB '16','?','First_Player_Name$'
 
 .code
 
@@ -34,6 +36,15 @@ main PROC far
     int 10h
 
 
+     mov di, offset First_Player_Name
+    add di,2
+    call print_string_chat_module_first_player
+
+    mov di, offset Second_Player_Name
+    add di,2
+    call print_string_chat_module_second_player
+
+
     call initializing
     call draw_line
     WHILE1:
@@ -47,6 +58,68 @@ main PROC far
     
 
 main ENDP
+
+print_string_chat_module_first_player PROC
+    mov dl,0
+    mov dh,0
+    print_string_chat_module_loop:
+     mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module    
+
+     mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop
+    ret_print_string_chat_module:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+
+    ret
+print_string_chat_module_first_player ENDP
+
+print_string_chat_module_second_player PROC
+    mov dl,0
+    mov dh,13d
+    print_string_chat_module_loop_second:
+     mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module_second   
+
+     mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop_second
+    ret_print_string_chat_module_second:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+
+    ret
+print_string_chat_module_second_player ENDP
 
 initializing PROC                 ;;GOOD PROC
     ;Set Divisor Latch Access Bit
@@ -138,7 +211,9 @@ PRINT_RECEIVED PROC
             call get_new_position
             here:
             mov is_enter,0
-
+            mov di, offset First_Player_Name
+            add di,2
+            call print_string_chat_module_first_player
             ret
 
 PRINT_RECEIVED ENDP
@@ -233,34 +308,6 @@ update_line PROC
     ret
 update_line ENDP
 
-
-
-; READ_FROM_KEYBOAD PROC
-;     MOV AH,1
-;     INT 16H
-;     JZ NO_KEY_PRESSED
-;     MOV AH,0 
-;     INT 16H
-;     MOV VALUE_TO_SEND,AL
-;     CALL   SEND_VALUE
-;     JMP END_READ_FROM_KEYBOARD
-;     NO_KEY_PRESSED:
-;     MOV VALUE_TO_SEND,0
-;     END_READ_FROM_KEYBOARD:
-    
-; RET
-; READ_FROM_KEYBOAD ENDP
-
-
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 draw_line_written PROC                        ;;GOOD PROC 
@@ -383,7 +430,9 @@ PRINT_WRITTEN PROC
             call get_new_position_written
             here_written:
             mov is_enter,0
-
+            mov di, offset Second_Player_Name
+            add di,2
+            call print_string_chat_module_second_player
             ret
 
 PRINT_WRITTEN ENDP

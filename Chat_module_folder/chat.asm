@@ -7,6 +7,7 @@
 	first_cursor_y db 14
     VALUE_TO_SEND db ?
     is_enter db ?
+    is_esc   db 0
     is_scroll db ?
     VALUE db ?
 
@@ -18,6 +19,7 @@
 
     Second_Player_Name  DB '16','?','Second_Player_Name$'
     First_Player_Name  DB '16','?','First_Player_Name$'
+    close_message     DB '----------------------------to end chatting press ESC---------------------------$'
 
 
 .code
@@ -30,23 +32,31 @@ main PROC far
     MOV ES,AX
 
 
+    
+
+    call chat_module
+
+
+    
+    
+
+main ENDP
+
+
+;description
+chat_module PROC
+    
     ;80*25
     mov ah,0
     mov al,3
     int 10h
-
-
-
 
     mov ah,2 
     mov dl,first_cursor_x
     mov dh,first_cursor_y
     int 10h
 
-    ; mov ah,2 
-    ; mov dl,first_cursor_x
-    ; mov dh,first_cursor_y
-    ; int 10h
+    
     mov di, offset First_Player_Name
     add di,2
     call print_string_chat_module_first_player
@@ -57,19 +67,47 @@ main PROC far
 
     call initializing
     call draw_line
-    WHILE1:
+    call print_close_message
+    WHILE1_chat_module:
     mov ah,2 
     mov dl,first_cursor_x
     mov dh,first_cursor_y
     int 10h
     call READ_FROM_KEYBOAD
     call RECEIVE_VALUE
-    jmp WHILE1
+    cmp is_esc,1d 
+    je ret_chat_module
     
+    jmp WHILE1_chat_module
 
-main ENDP
+    ret_chat_module:
+    ret
 
+chat_module ENDP
+;description
+print_close_message PROC
+    mov dl,0
+    mov dh,24d
+    mov di,offset close_message
+    print_close_message_loop:
+    mov ah,2 
+    int 10h 
+     mov al,[di]
+    cmp al,'$'
+    je print_close_message_ret
+    mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_close_message_loop
+    print_close_message_ret:
+    ret
 
+print_close_message ENDP
 ;needs the string to be in di 
 print_string_chat_module_first_player PROC
     mov dl,0
@@ -216,6 +254,7 @@ PRINT_RECEIVED PROC
             mov di, offset Second_Player_Name
             add di,2
             call print_string_chat_module_second_player
+            call print_close_message
             ret
 
 PRINT_RECEIVED ENDP
@@ -231,6 +270,12 @@ JZ END_RECEIVE_VALUE ;Not Ready
 mov dx , 03F8H
 in al , dx
 mov VALUE , al
+
+cmp al,1Bh 
+jne continue_receive_value
+mov is_esc,1
+continue_receive_value:
+
 CALL  PRINT_RECEIVED
 
 END_RECEIVE_VALUE:
@@ -243,7 +288,7 @@ check_enter PROC
     ; cmp first_cursor_y,11
     ; jz 
     enter_action:
-        cmp first_cursor_y,24
+        cmp first_cursor_y,23
         jz call_scroll1
         inc first_cursor_y
         mov first_cursor_x,0
@@ -268,7 +313,7 @@ get_new_position PROC
        inc first_cursor_x      
        jmp return
     new_line:
-      cmp first_cursor_y,24d
+      cmp first_cursor_y,23d
       jz call_scroll
       inc first_cursor_y            ; move to new line
       mov first_cursor_x,0
@@ -287,12 +332,12 @@ check_scroll PROC
     mov ch,13d     ;; begin to scroll from y=13
 	mov cl,0
     
-	mov dh,24d
+	mov dh,23d
 	mov dl,79d      
     int 10h
     call update_line
     mov first_cursor_x,0
-    MOV first_cursor_Y,24d
+    MOV first_cursor_Y,23d
     ret
 check_scroll ENDP
 
@@ -447,6 +492,7 @@ PRINT_WRITTEN PROC
             mov di, offset First_Player_Name
             add di,2
             call print_string_chat_module_first_player
+            call print_close_message
             ret
 
 PRINT_WRITTEN ENDP
@@ -477,6 +523,13 @@ READ_FROM_KEYBOAD PROC
     MOV AH,0 
     INT 16H
     MOV VALUE_TO_SEND,AL
+    cmp al,1Bh 
+    jne continue_read_from_keyboard
+
+    mov is_esc,1h
+
+    continue_read_from_keyboard:
+
     CALL   SEND_VALUE
     CALL PRINT_WRITTEN
     JMP END_READ_FROM_KEYBOARD

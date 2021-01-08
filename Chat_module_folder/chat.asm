@@ -126,9 +126,13 @@ PRINT_RECEIVED PROC
             mov dh,first_cursor_y
             int 10h
 
-            mov ah,2
-            mov dl,VALUE
-            int 21h
+            mov ah,09h
+            mov al,VALUE
+            mov bh,0
+            mov bl,0fh ;white color
+            mov cx,1
+            int 10h
+          
            
             call get_new_position
             here:
@@ -205,12 +209,12 @@ check_scroll PROC
     mov ch,13d     ;; begin to scroll from y=13
 	mov cl,0
     
-	mov dh,23d
-	mov dl,75d      
+	mov dh,24d
+	mov dl,79d      
     int 10h
     call update_line
     mov first_cursor_x,0
-    MOV first_cursor_Y,23d
+    MOV first_cursor_Y,24d
     ret
 check_scroll ENDP
 

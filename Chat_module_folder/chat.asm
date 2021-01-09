@@ -3,22 +3,22 @@
 
 .data
 
-	first_cursor_x db 0
-	first_cursor_y db 14
+	first_cursor_x db 0             ;X_position of the first cursor
+	first_cursor_y db 14            ;Y_position of the first cursor
     VALUE_TO_SEND db ?
     is_enter db ?
     is_esc   db 0
     is_scroll db ?
     VALUE db ?
 
-    second_cursor_x db 0
-	second_cursor_y db 1
+    second_cursor_x db 0            ;X_position of the second cursor
+	second_cursor_y db 1            ;Y_position of the second cursor
     
   
     
 
-    Second_Player_Name  DB '16','?','Second_Player_Name$'
-    First_Player_Name  DB '16','?','First_Player_Name$'
+    Second_Player_Name  DB 16,?,'Second_Player_Name$$$'
+    First_Player_Name  DB 16,?,'First_Player_Name$$'
     close_message     DB '----------------------------to end chatting press ESC---------------------------$'
 
 
@@ -43,17 +43,17 @@ main PROC far
 
     
 
-    call far ptr chat_module
+;    call far ptr chat_module
 
-  ;  call far ptr chat_module_2
+    call far ptr chat_module_2
     
     
 
 main ENDP
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
-chat_module PROC
+chat_module PROC FAR
     
     ;80*25
     mov ah,0
@@ -93,8 +93,10 @@ chat_module PROC
     ret
 
 chat_module ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
-print_close_message PROC
+print_close_message PROC FAR
     mov dl,0
     mov dh,24d
     mov di,offset close_message
@@ -117,8 +119,11 @@ print_close_message PROC
     ret
 
 print_close_message ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;needs the string to be in di 
-print_string_chat_module_first_player PROC
+print_string_chat_module_first_player PROC FAR
     mov dl,0
     mov dh,0
     print_string_chat_module_loop:
@@ -149,7 +154,9 @@ print_string_chat_module_first_player PROC
     ret
 print_string_chat_module_first_player ENDP
 
-print_string_chat_module_second_player PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_second_player PROC FAR
     mov dl,0
     mov dh,13d
     print_string_chat_module_loop_second:
@@ -181,7 +188,10 @@ print_string_chat_module_second_player PROC
 print_string_chat_module_second_player ENDP
 
 
-initializing PROC                 ;;GOOD PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+initializing PROC FAR                ;;GOOD PROC
     ;Set Divisor Latch Access Bit
     mov dx,3fbh ; Line Control Register
     mov al,10000000b ;Set Divisor Latch Access Bit
@@ -209,8 +219,10 @@ initializing PROC                 ;;GOOD PROC
     ret  
 initializing ENDP
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;description
-draw_line PROC                        ;;GOOD PROC 
+draw_line PROC  FAR                      ;;GOOD PROC 
  	mov ax,0b800h ;text mode 
 	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
 	mov es,ax
@@ -224,9 +236,9 @@ draw_line ENDP
 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-PRINT_RECEIVED PROC
+PRINT_RECEIVED PROC FAR
     
    
 
@@ -269,7 +281,8 @@ PRINT_RECEIVED PROC
 PRINT_RECEIVED ENDP
 
 
-RECEIVE_VALUE_CHAT1 PROC                            ;; GOOD PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+RECEIVE_VALUE_CHAT1 PROC FAR                           ;; GOOD PROC
 ;Check that Data is Ready
 mov dx , 3FDH ; Line Status Register
  in al , dx
@@ -285,13 +298,13 @@ jne continue_receive_value
 mov is_esc,1
 continue_receive_value:
 
-CALL  PRINT_RECEIVED
+call FAR ptr  PRINT_RECEIVED
 
 END_RECEIVE_VALUE:
 ret
 RECEIVE_VALUE_CHAT1 ENDP
 
-check_enter PROC
+check_enter PROC FAR
     cmp al,0dh
     jnz end_enter
     ; cmp first_cursor_y,11
@@ -316,7 +329,8 @@ check_enter PROC
 check_enter ENDP
 ;description
 
-get_new_position PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+get_new_position PROC FAR
     cmp first_cursor_x,75d
     jz new_line 
        inc first_cursor_x      
@@ -334,8 +348,9 @@ get_new_position PROC
 get_new_position ENDP
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;description
-check_scroll PROC
+check_scroll PROC FAR
     mov ax,0601h
     mov bh,00
     mov ch,13d     ;; begin to scroll from y=13
@@ -350,8 +365,9 @@ check_scroll PROC
     ret
 check_scroll ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
-update_line PROC
+update_line PROC FAR
     mov ax,0b800h
 	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
 	mov es,ax
@@ -375,8 +391,8 @@ update_line ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-draw_line_written PROC                        ;;GOOD PROC 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+draw_line_written PROC FAR                     ;;GOOD PROC 
  	mov ax,0b800h ;text mode 
 	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
 	mov es,ax
@@ -387,8 +403,8 @@ draw_line_written PROC                        ;;GOOD PROC
     ret
 draw_line_written ENDP
 
-
-update_line_written PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update_line_written PROC FAR
     mov ax,0b800h
 	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
 	mov es,ax
@@ -405,9 +421,9 @@ update_line_written PROC
 update_line_written ENDP
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-check_scroll_written PROC
+check_scroll_written PROC FAR
     mov ax,0601h
     mov bh,2d
     mov ch,0
@@ -421,9 +437,9 @@ check_scroll_written PROC
     ret
 check_scroll_written ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-check_enter_written PROC
+check_enter_written PROC FAR
     cmp al,0dh
     jnz end_enter_written
     ; cmp first_cursor_y,11
@@ -446,10 +462,10 @@ check_enter_written PROC
     end_enter_written:        
     ret
 check_enter_written ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
-
-
-get_new_position_written PROC
+get_new_position_written PROC FAR
     cmp second_cursor_x,75
     jz new_line_written 
        inc second_cursor_x      
@@ -466,9 +482,9 @@ get_new_position_written PROC
     ret
 get_new_position_written ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-PRINT_WRITTEN PROC
+PRINT_WRITTEN PROC FAR
     
    
 
@@ -507,10 +523,10 @@ PRINT_WRITTEN PROC
 PRINT_WRITTEN ENDP
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
-SEND_VALUE_CHAT1 PROC                                 ;; GOOD PROC
+SEND_VALUE_CHAT1 PROC FAR                                ;; GOOD PROC
 
 ;Check that Transmitter Holding Register is Empty
 mov dx , 3FDH ; Line Status Register
@@ -524,8 +540,8 @@ out dx , al
 RET
 SEND_VALUE_CHAT1 ENDP
 
-
-READ_FROM_KEYBOAD PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+READ_FROM_KEYBOAD PROC FAR
     MOV AH,1
     INT 16H
     JZ NO_KEY_PRESSED
@@ -539,8 +555,8 @@ READ_FROM_KEYBOAD PROC
 
     continue_read_from_keyboard:
 
-    CALL   SEND_VALUE_CHAT1
-    CALL PRINT_WRITTEN
+    call FAR ptr   SEND_VALUE_CHAT1
+    call FAR ptr PRINT_WRITTEN
     JMP END_READ_FROM_KEYBOARD
     NO_KEY_PRESSED:
     MOV VALUE_TO_SEND,0
@@ -558,7 +574,7 @@ READ_FROM_KEYBOAD ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;description
-chat_module_2 PROC
+chat_module_2 PROC FAR
     
 
  mov ah,0
@@ -598,7 +614,9 @@ chat_module_2 PROC
     end_chat_module_2:
     ret
 chat_module_2 ENDP
-print_close_message2 PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_close_message2 PROC FAR
     mov dl,0
     mov dh,24d
     mov di,offset close_message
@@ -622,7 +640,9 @@ print_close_message2 PROC
 
 print_close_message2 ENDP
 
-print_string_chat_module_first_player2 PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_first_player2 PROC FAR
     mov dl,0
     mov dh,0
     print_string_chat_module_loop2:
@@ -653,7 +673,9 @@ print_string_chat_module_first_player2 PROC
     ret
 print_string_chat_module_first_player2 ENDP
 
-print_string_chat_module_second_player2 PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_second_player2 PROC FAR
     mov dl,0
     mov dh,13d
     print_string_chat_module_loop_second2:
@@ -684,7 +706,9 @@ print_string_chat_module_second_player2 PROC
     ret
 print_string_chat_module_second_player2 ENDP
 
-initializing2 PROC                 ;;GOOD PROC
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+initializing2 PROC FAR                 ;;GOOD PROC
     ;Set Divisor Latch Access Bit
     mov dx,3fbh ; Line Control Register
     mov al,10000000b ;Set Divisor Latch Access Bit
@@ -712,8 +736,10 @@ initializing2 PROC                 ;;GOOD PROC
     ret  
 initializing2 ENDP
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;description
-draw_line2 PROC                        ;;GOOD PROC 
+draw_line2 PROC FAR                        ;;GOOD PROC FAR 
  	mov ax,0b800h ;text mode 
 	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
 	mov es,ax
@@ -726,7 +752,7 @@ draw_line2 ENDP
 
 
 
-; SEND_VALUE_CHAT1 PROC                                 ;; GOOD PROC
+; SEND_VALUE_CHAT1 PROC FAR                                 ;; GOOD PROC FAR
 
 ; ;Check that Transmitter Holding Register is Empty
 ; mov dx , 3FDH ; Line Status Register
@@ -740,8 +766,8 @@ draw_line2 ENDP
 ; RET
 ; SEND_VALUE_CHAT1 ENDP
 
-
-PRINT_RECEIVED2 PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_RECEIVED2 PROC FAR
     
    
 
@@ -783,7 +809,9 @@ PRINT_RECEIVED2 PROC
 PRINT_RECEIVED2 ENDP
 
 
-RECEIVE_VALUE2 PROC                            ;; GOOD PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+RECEIVE_VALUE2 PROC FAR                            ;; GOOD PROC FAR
 ;Check that Data is Ready
 mov dx , 3FDH ; Line Status Register
  in al , dx
@@ -798,13 +826,16 @@ cmp al,1Bh
 jne continue_receive_value2
 mov is_esc,1
 continue_receive_value2:
-CALL  PRINT_RECEIVED2
+call FAR ptr  PRINT_RECEIVED2
 
 END_RECEIVE_VALUE2:
 ret
 RECEIVE_VALUE2 ENDP
 
-check_enter2 PROC
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+check_enter2 PROC FAR
     cmp al,0dh
     jnz end_enter2
     ; cmp first_cursor_y_chat2,11
@@ -827,9 +858,12 @@ check_enter2 PROC
     end_enter2:        
     ret
 check_enter2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
 
-get_new_position2 PROC
+get_new_position2 PROC FAR
     cmp first_cursor_x_chat2,75
     jz new_line2 
        inc first_cursor_x_chat2      
@@ -846,9 +880,9 @@ get_new_position2 PROC
     ret
 get_new_position2 ENDP
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;description
-check_scroll2 PROC
+check_scroll2 PROC FAR
     mov ax,0601h
     mov bh,00
     mov ch,0
@@ -862,8 +896,9 @@ check_scroll2 PROC
     ret
 check_scroll2 ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;description
-update_line2 PROC
+update_line2 PROC FAR
     mov ax,0b800h
 	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
 	mov es,ax
@@ -877,9 +912,10 @@ update_line2 PROC
     ret
 update_line2 ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-draw_line_written2 PROC                        ;;GOOD PROC 
+draw_line_written2 PROC FAR                        ;;GOOD PROC FAR 
  	mov ax,0b800h ;text mode 
 	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
 	mov es,ax
@@ -890,8 +926,8 @@ draw_line_written2 PROC                        ;;GOOD PROC
     ret
 draw_line_written2 ENDP
 
-
-update_line_written2 PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update_line_written2 PROC FAR
     mov ax,0b800h
 	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
 	mov es,ax
@@ -906,9 +942,9 @@ update_line_written2 PROC
 update_line_written2 ENDP
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-check_scroll_written2 PROC
+check_scroll_written2 PROC FAR
     mov ax,0601h
     mov bh,00
     mov ch,13d
@@ -923,8 +959,8 @@ check_scroll_written2 PROC
 check_scroll_written2 ENDP
 
 
-
-check_enter_written2 PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+check_enter_written2 PROC FAR
     cmp al,0dh
     jnz end_enter_written2
     ; cmp first_cursor_y_chat2,11
@@ -947,10 +983,13 @@ check_enter_written2 PROC
     end_enter_written2:        
     ret
 check_enter_written2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;description
 
 
-get_new_position_written2 PROC
+get_new_position_written2 PROC FAR
     cmp second_cursor_x_chat2,75
     jz new_line_written2
        inc second_cursor_x_chat2      
@@ -968,8 +1007,8 @@ get_new_position_written2 PROC
 get_new_position_written2 ENDP
 
 
-
-PRINT_WRITTEN2 PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_WRITTEN2 PROC FAR
     
    
 
@@ -1007,11 +1046,12 @@ PRINT_WRITTEN2 PROC
 
 PRINT_WRITTEN2 ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 
 
-SEND_VALUE2 PROC                                 ;; GOOD PROC
+SEND_VALUE2 PROC FAR                                 ;; GOOD PROC FAR
 
 ;Check that Transmitter Holding Register is Empty
 mov dx , 3FDH ; Line Status Register
@@ -1025,8 +1065,8 @@ out dx , al
 RET
 SEND_VALUE2 ENDP
 
-
-READ_FROM_KEYBOARD2 PROC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+READ_FROM_KEYBOARD2 PROC FAR
     MOV AH,1
     INT 16H
     JZ NO_KEY_PRESSED2
@@ -1039,8 +1079,8 @@ READ_FROM_KEYBOARD2 PROC
     mov is_esc,1
 
     continue_read_from_keyboard2:
-    CALL   SEND_VALUE2
-    CALL PRINT_WRITTEN2
+    call FAR ptr   SEND_VALUE2
+    call FAR ptr PRINT_WRITTEN2
     JMP END_READ_FROM_KEYBOARD2
     NO_KEY_PRESSED2:
     MOV VALUE_TO_SEND,0
@@ -1050,7 +1090,7 @@ RET
 READ_FROM_KEYBOARD2 ENDP
 
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 

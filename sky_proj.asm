@@ -38,7 +38,7 @@ ENDM
 	TIME_AUX            DB  0                                ;variable used when checking if the time has changed
 	
 	background_color    EQU 53                               ;Background pixel color id
-	graphics_mode       EQU 13h                              ;320*200 pixels , 256colors
+	graphics_mode       db 13h                              ;320*200 pixels , 256colors
 
 	PRE_POSITION_X       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
@@ -107,6 +107,33 @@ ENDM
 	
 	Red_Laser_Start_X DW ?
 	Red_Laser_End_X DW ?
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Chat Variables;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	first_cursor_x db 0             ;X_position of the first cursor
+	first_cursor_y db 14            ;Y_position of the first cursor
+    VALUE_TO_SEND db ?
+    is_enter db ?
+    is_esc   db 0
+    is_scroll db ?
+    VALUE db ?
+
+    second_cursor_x db 0            ;X_position of the second cursor
+	second_cursor_y db 1            ;Y_position of the second cursor
+    
+  
+    close_message     DB '----------------------------to end chatting press ESC---------------------------$'
+
+
+
+    ;;;;;;;;;;;;;CHAT2 variables ;;;;;;;;;
+
+    first_cursor_x_chat2 db 0
+	first_cursor_y_chat2 db 1
+     second_cursor_x_chat2 db 0
+	second_cursor_y_chat2 db 14
+
+
 
 
 
@@ -366,6 +393,439 @@ MAIN PROC FAR
 									RET
 MAIN ENDP
 	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;description
+Game_over_screen PROC
+                                   mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
+	                                 mov  di,0
+	                                 mov  al,img[DI]                       	;the pixel color
+	                                 mov  bh,0                            	;the page number
+	                                 mov  cx,x_position               	;the starting x-position (column)
+	                                 add  cx,imgW                	;as we draw in the reversed order
+	                                 mov  dx,y_position               	;the starting y-position (row)
+	                                 add  dx,imgH               	;as we draw in the reversed order
+	;here we loop for the image size (player_size)
+	fill_over:                         
+	                                 cmp  al,16
+	                                 jz   pass_the_pixel_over
+	                                 int  10h
+	pass_the_pixel_over:                  
+	                                 inc  di
+	                                 mov  al,img[DI]
+	                                 dec  cx
+	                                 cmp  cx,x_position
+	                                 jnz  fill_over                        	;if not zero so we continue to the same row
+	                                 mov  cx,x_position               	;the starting x-position (column)
+	                                 add  cx,imgw                	;as we draw in the reversed order
+	                                 dec  dx                              	;if not zero so we continue to draw the background
+	                                 cmp  dx,y_position
+	                                 jnz  fill_over
+    ret
+Game_over_screen ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;This function is to take Players name Before entering the game
+Take_User_Data PROC FAR
+	
+    Start:
+	
+                            CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
+	
+	
+	
+                            mov ah,0
+	
+                            mov al,02
+	
+                            int 10h     ;this to choose text mode
+	
+	
+                            mov ah,2        
+	
+                            mov dx,01113h
+	
+                            int 10h                ;Position the Cursor
+                            
+                            PRINT_Messages Invalid_Start_msg
+                            
+                            Add DH,2                                                
+                            INT 10H
+
+                          
+                            PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
+	
+                            Add DH,2                                                
+                            INT 10H                                                        ;Position the Cursor below it by two rows
+	
+                            
+	
+                            Take_First_name:                                ;Start taking the first name untill it reaches the maximum/or the player presses enter
+	
+	
+	
+                                                            mov AH,0AH
+                                                            mov dx,offset First_Player_Name
+                                                            int 21h
+
+                                                            CMP First_Player_Name[2],65
+                                                            JGE GREATER_Than_65
+                                                            JL Wrong_start
+                                                            GREATER_Than_65:
+                                                            CMP First_Player_Name[2],90
+                                                            JLE Between_65_90_or_97_122
+                                                            JG Greater_than_90
+                                                            
+
+Greater_than_90:
+                                                            CMP First_Player_Name[2],97
+                                                            JGE GREATER_Than_97
+                                                            JL Wrong_start
+                                                            GREATER_Than_97:
+                                                            CMP First_Player_Name[2],122
+                                                            JLE Between_65_90_or_97_122
+                                                            JG Wrong_start                                                    
+	
+	
+	Between_65_90_or_97_122:
+    
+	
+                            mov ah,2        
+	
+                            mov dx,01113h
+	
+                            add dh,4h
+	
+                            int 10h    
+                        
+                            PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
+	
+                            Add DH,2                                                
+	
+                            INT 10H                                                        ;Position the Cursor below it by two rows
+	
+                            
+	
+                            Take_Second_name:                                ;Start taking the Second name untill it reaches the maximum/or the player presses enter
+	
+                                                            mov AH,0AH
+                                                            mov dx,offset Second_Player_Name
+                                                            int 21h
+                                                            CMP Second_Player_Name[2],65
+                                                            JGE GREATER_Than_65_2
+                                                            JL Wrong_start
+                                                            GREATER_Than_65_2:
+                                                            CMP Second_Player_Name[2],90
+                                                            JLE Temp_End
+                                                            JG Greater_than_90_2
+                                                            
+
+Greater_than_90_2:
+                                                            CMP Second_Player_Name[2],97
+                                                            JGE GREATER_Than_97_2
+                                                            JL Wrong_start
+                                                            GREATER_Than_97_2:
+                                                            CMP Second_Player_Name[2],122
+                                                            JLE Temp_End
+                                                            JG Wrong_start 
+                                                                                                                    
+
+Wrong_start:
+                            mov ah,2        
+                            mov dx,1620h
+                            int 10h ;Position the Cursor
+                            PRINT_Messages Invalid_Start_msg2
+                            ;;;;;delay;;;;;;
+                                mov cx, 05h ;HIGH WORD.
+                                mov dx, 2420h ;LOW WORD.
+                                mov ah, 86h ;WAIT.
+                                int 15h
+
+                            Jmp Start
+
+
+
+
+
+Temp_End:
+
+                                    RET
+Take_User_Data ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+Main_menu PROC FAR
+
+				FIRST_MENU:
+					mov ah,00
+					mov al,02
+					int 10h
+
+					mov ah,2
+					mov dx,01113h
+					int 10h
+					
+					PRINT_Messages CHAT
+					ADD DH,2
+					INT 10h
+					PRINT_Messages Sky_GAME
+					ADD DH,2
+					INT 10h
+					PRINT_Messages END_GAME_mess
+					
+					Check:
+
+							mov ah,0
+							int 16h
+							cmp AH,3BH		;if f1 is pressed, go to chat module
+							JE CHAT_Module_Chosen
+							cmp AH,3CH		;if f2 is pressed, start the game
+							JE Which_level
+							Cmp AH,01
+							JE End_Game
+							jmp check
+
+					CHAT_Module_Chosen:
+					    call far ptr chat_module
+						jmp first_menu
+					Which_level:
+                                   mov ah,00
+                                    mov al,02
+                                    int 10h
+                                    mov ah,2
+                                    mov dx,01113h
+                                    int 10h
+                                    PRINT_Messages levelone
+                                     ADD DH,2
+                                    INT 10h
+                                    PRINT_Messages leveltwo
+
+                                    mov ah,0
+                                    int 16h
+									cmp al,'1'
+									JE Level_is_Valid
+									cmp al,'2'
+									jne Which_level
+					Level_is_Valid:
+                                    mov level,al
+									CALL FAR PTR Start_Game
+									jmp First_menu
+
+					End_Game :
+							RET
+Main_menu ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Start_Game PROC FAR
+                ;;SOME INITIALIZATIONS AS the player can play the game multiple times
+                MOV  TIME_AUX,0                
+                MOV PRE_POSITION_X,0          							
+                MOV 	PRE_POSITION_Y,0      						
+                MOV 	PRE_POSITION_X2,0     						
+                MOV 	PRE_POSITION_Y2,0     						
+                MOV 	first_player_X,20     								 
+                MOV 	first_player_Y,50     								 
+                MOV 	first_player_health,5                                							 
+                MOV 	first_player_health_immunity,0 						
+                MOV 	first_player_Freeze,0 							 
+                MOV     First_Is_Collided,0                                    
+                MOV 	second_player_X,270      								
+                MOV 	SECOND_PLAYER_Y,50      								
+                MOV 	second_player_health,5                            
+                MOV 	second_player_health_immunity,0 				
+                MOV 	second_player_Freeze,0 
+                MOV     Second_Is_Collided,0                              					
+                MOV	    X_BARRIER1,10    							 	 
+                MOV	    Y_BARRIER1,140      									 
+                MOV	    X_BARRIER2,260     									 
+                MOV	    Y_BARRIER2,104   
+				
+				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+				
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				call FAR PTR draw_background ;draw the background of the Game window
+				call FAR PTR draw_h1
+				call FAR PTR draw_h2
+				CALL FAR PTR draw_p1
+				CALL FAR PTR draw_p2
+				call FAR PTR DRAW_BARRIER1
+				call FAR PTR DRAW_BARRIER2
+
+				;; print name
+				MOV AH,2
+				MOV DX,000DH
+				INT 10H
+				MOV DI,OFFSET First_Player_Name
+				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
+				INC DI
+				mov bl,[di]
+				mov string_name_size,bl
+				INC DI
+				MOV CHOOSE_COLOR,0           ;;PUT 0 IN THIS VARIABLE TO PRINT IN RED FOR THE RED FIRST PLAYER
+				CALL FAR PTR PRINT_STRING
+
+				MOV AH,2
+				MOV DX,010DH
+				INT 10H
+				MOV DI,OFFSET Second_Player_Name
+				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
+				INC DI
+				mov bl,[di]
+				mov string_name_size,bl
+				INC DI
+				MOV CHOOSE_COLOR,1          ;;PUT 1 IN THIS VARIABLE TO PRINT IN BLUE FOR THE BLUE FIRST PLAYER
+				CALL FAR PTR PRINT_STRING
+
+
+				;;END PRINT NAME 
+
+				;;clear names if the player wants to reset the game
+				mov di,offset First_Player_Name 
+				add di,2
+				mov si,offset Second_Player_Name
+				add si,2
+				mov cx,15
+				reset_names:
+				
+				mov [di],'$'
+				mov [si],'$'
+				inc di
+				inc si
+				loop reset_names
+
+				
+
+			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				CHECK_TIME:       
+
+							MOV  AH,2Ch                          	;get the system time
+							INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
+							CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
+							JE   CHECK_TIME                      	;if it is the same, check again
+							;if it's different, then draw, move, etc.
+							MOV  TIME_AUX,DL                         ;update time
+
+							cmp level,49    
+							JZ level1
+							
+							level2:
+							CALL FAR PTR MOVE_BARRIERS_2
+
+							level1:                
+							CALL FAR PTR MOVE_BARRIERS
+							
+
+							;check if health is zero, Game Over
+							mov ax,first_player_health
+							cmp ax,0
+							jz Game_Over
+
+							;check if health is zero, Game Over
+							mov ax,second_player_health
+							cmp ax,0
+							jz Game_Over
+
+							CALL FAR PTR MOVE_PLAYERS
+							
+							;;;;;;;;;;;;;Flushing the keyboard buffer
+							mov ah,0ch
+							mov al,0
+							int 21h												
+					JMP  CHECK_TIME                      	;after everything checks time again		
+
+			;;;;;;;;;;;GAME ENDING FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				Game_Over: 
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				; call FAR PTR draw_background
+				call far PTR Game_over_screen
+					mov ax,second_player_health
+				cmp ax,0
+				jz first_wins
+				mov ax,first_player_health
+				cmp ax,0
+				jz second_wins
+				jmp final
+					first_wins:
+					mov first_player_X,30 
+					mov first_player_y,90
+					call FAR PTR draw_p1
+					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 0eh ;YELLOW
+					MOV CX, 17 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+					jmp final
+					second_wins:
+					mov second_player_X,30
+					mov second_player_Y,90
+					call FAR PTR draw_p2
+					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 01h ;BLUE
+					MOV CX, 18 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+
+				final:
+                mov ah,2        
+                mov dx,1100h
+                int 10h                ;Position the Cursor
+				ADD DH,3
+				PRINT_Messages GAME_OVER_mess
+				mov ah,0
+				int 16h
+				cmp AH,01
+				JNE Final
+			    Call FAR PTR Take_User_Data
+
+	RET
+Start_Game ENDP
+
+;prints one characgter in graphics mode
+ PRINT_CHAR proc                         ;; PUT IN CHOOSE_COLOR 0H TO PRINT IN RED,ANY VALUE TO PRINT IN BLUE TO PRINT IN BLUE
+		MOV BL,CHOOSE_COLOR
+        mov  al, [di] 
+		CMP BL,0  
+		JE RED_CHAR
+		MOV BL,01H
+		JMP CONTINUE_PRINT_CHAR_FUN
+		RED_CHAR:   
+        mov  bl, 04h  ;Color is red
+		CONTINUE_PRINT_CHAR_FUN:
+        mov  bh, 0    ;Display page
+        mov  ah, 0Eh  ;Teletype
+        int  10h
+        RET
+PRINT_CHAR endp 
+;PRINTS STRING IN GRAPHICS MODE , NEED TO PUT THE OFFSET IN DI BEFORE CALLING AND ALSO CALIBRATE THE CURSOR POSITON
+ PRINT_STRING proc
+        PRINT_AGAIN_STRING:
+        MOV AL,[DI]
+		mov bl,string_name_size
+        CMP BL,0
+        JE END_PRINT_STRING
+        
+        CALL FAR PTR PRINT_CHAR
+        INC DI
+		dec string_name_size
+        JMP PRINT_AGAIN_STRING
+		;loop PRINT_AGAIN_STRING
+        END_PRINT_STRING:
+
+        RET
+
+
+PRINT_STRING endp 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;taking the character from the user and reacting to it
@@ -405,7 +865,7 @@ MOVE_PLAYERS PROC FAR
 
 									 Second_Attacked:
 									 cmp AH,1Ch  ;this is Enter
-									 jne first_moved
+									 jne Is_chatting
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
 									 cmp Second_Is_Collided,1                ;If he is colliding, he cannot attack
@@ -413,13 +873,17 @@ MOVE_PLAYERS PROC FAR
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
-									 First_moved:
+									Is_chatting:
+									cmp AL,1Bh ;this is escape to go to chat mode 
+									jne First_moved
+									call far PTR start_in_game_chatting
+									First_moved:
 									cmp AH , 40h ;check if it is the second player( Scan Code in AH, if greater than 40h --> it must be second player)
 									JG Second_MOVED
-									 cmp first_player_freeze,0
-									 jg End_Moving					;if it is still freezed
+									cmp first_player_freeze,0
+									jg End_Moving					;if it is still freezed
 									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
-									 jmp End_Moving
+									jmp End_Moving
 
 									Second_MOVED:
 									 cmp second_player_freeze,0
@@ -427,10 +891,36 @@ MOVE_PLAYERS PROC FAR
 									call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
 									 jmp End_Moving
 
+									 
+
+
 			End_Moving:
 			RET
 				
 MOVE_PLAYERS ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+
+;osama magdy is fucked
+;this function is pausing the game untill one player 
+start_in_game_chatting proc FAR
+start_in_game_chatting_again:
+
+    ;;print name 1 in pos 21
+	;if x=79  and erase all and print name again
+	;print chars from keyboard
+	;if  enter pressed  then erase backward all and prnit name agaibn 
+	;send the character 
+
+	;print name2 in pos 22;
+	;if x=79 erase all backward and print name 
+	;if recevived print character 
+	;if enter rceived erase backwards ;if x=79  erase all and print name again
+
+
+
+RET
+start_in_game_chatting ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;this will check for direction of the attack
@@ -473,7 +963,7 @@ Second_Player_Attack ENDP
 ;clear the console
 CLEAR_SCREEN PROC FAR
 	                                 MOV  AH,00h                          	;set the configuration to video mode
-	                                 MOV  AL,13h                          	;choose the video mode
+	                                 MOV  AL,graphics_mode                  ;choose the video mode
 	                                 INT  10h                             	;execute the configuration
 		
 	                                 MOV  AH,0fh                          	;set the configuration
@@ -1343,7 +1833,7 @@ CHECK_OVERLAPPING_BARRIER2 PROC FAR
 	                               RET
 CHECK_OVERLAPPING_BARRIER2 ENDP
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ERASE_RECTANGLE proc FAR
 
                             ;MOV DI,0
@@ -2373,435 +2863,1103 @@ mov Blue_Laser_End_X,bx
 Call Draw_Blue_LASER_Right_TO_Left
 RET
 Second_Attack_Right_TO_Left ENDP
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    CHAT    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;    PROC    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+chat_module PROC FAR
+    
+
+	mov first_cursor_x , 0 
+	mov first_cursor_y , 14
+	mov second_cursor_x,0
+	mov second_cursor_y,1
+	
+	mov VALUE_TO_SEND ,0
+    mov is_enter ,0
+    mov is_esc , 0
+   	mov is_scroll,0
+    mov VALUE , 0
+
+
+
+	mov first_cursor_x_chat2 , 0
+	mov first_cursor_y_chat2 , 1
+    mov second_cursor_x_chat2 , 0
+	mov second_cursor_y_chat2 , 14
+
+
+
+
+    ;80*25
+    mov ah,0
+    mov al,3
+    int 10h
+
+    mov ah,2 
+    mov dl,first_cursor_x
+    mov dh,first_cursor_y
+    int 10h
+
+    
+    mov di, offset First_Player_Name
+    add di,2
+    call far ptr print_string_chat_module_first_player
+
+    mov di, offset Second_Player_Name
+    add di,2
+    call far ptr print_string_chat_module_second_player
+
+    call far ptr initializing
+    call far ptr draw_line
+    call far ptr print_close_message
+    WHILE1_chat_module:
+    mov ah,2 
+    mov dl,first_cursor_x
+    mov dh,first_cursor_y
+    int 10h
+    call far ptr READ_FROM_KEYBOAD
+    call far ptr RECEIVE_VALUE_CHAT1
+    cmp is_esc,1d 
+    je ret_chat_module
+    
+    jmp WHILE1_chat_module
+
+    ret_chat_module:
+    ret
+
+chat_module ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+print_close_message PROC FAR
+    mov dl,0
+    mov dh,24d
+    mov di,offset close_message
+    print_close_message_loop:
+    mov ah,2 
+    int 10h 
+     mov al,[di]
+    cmp al,'$'
+    je print_close_message_ret
+    mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_close_message_loop
+    print_close_message_ret:
+    ret
+
+print_close_message ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;needs the string to be in di 
+print_string_chat_module_first_player PROC FAR
+    mov dl,0
+    mov dh,0
+    print_string_chat_module_loop:
+    mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module    
+
+    mov ah,09h
+    mov al,[di]
+    mov bh,0
+    mov bl,0fh ;white color
+    mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop
+    ret_print_string_chat_module:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+
+    ret
+print_string_chat_module_first_player ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_second_player PROC FAR
+    mov dl,0
+    mov dh,13d
+    print_string_chat_module_loop_second:
+     mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module_second   
+
+     mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop_second
+    ret_print_string_chat_module_second:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+
+    ret
+print_string_chat_module_second_player ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+initializing PROC FAR                ;;GOOD PROC
+    ;Set Divisor Latch Access Bit
+    mov dx,3fbh ; Line Control Register
+    mov al,10000000b ;Set Divisor Latch Access Bit
+    out dx,al ;Out it
+
+    ; Set LSB byte of the Baud Rate Divisor Latch register.
+    mov dx,3f8h
+    mov al,0ch
+    out dx,al
+
+    ; Set MSB byte of the Baud Rate Divisor Latch register.
+    mov dx,3f9h
+    mov al,00h
+    out dx,al
+
+    ; Set port configuration
+    mov dx,3fbh
+    mov al,00011011b
+    ; 0:Access to Receiver buffer, Transmitter buffer
+    ; 0:Set Break disabled
+    ; 011:Even Parity
+    ; 0:One Stop Bit
+    ; 11:8bits
+    out dx,al
+    ret  
+initializing ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;description
+draw_line PROC  FAR                      ;;GOOD PROC 
+ 	mov ax,0b800h ;text mode 
+	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
+	mov es,ax
+    mov ah,0fh    ; black background
+	mov al,2Dh    ; '-'
+	mov cx,80
+	rep stosw
+    ret
+draw_line ENDP
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+PRINT_RECEIVED PROC FAR
+    
+   
+
+        ;get_key_pressed:
+            ; mov ah,0
+            ; int 16h
+            ;mov VALUE,al  ; holds the char required to be sent
+            mov al,VALUE
+
+            ;check if key pressed is enter key
+            call far ptr check_enter
+            cmp is_enter,1
+            jz here
+        
+            ;CALL   SEND_VALUE_CHAT1
+            ;set cursor
+            mov ah,2 
+            mov bh,0
+            mov dl,first_cursor_x
+            mov dh,first_cursor_y
+            int 10h
+
+            mov ah,09h
+            mov al,VALUE
+            mov bh,0
+            mov bl,0fh ;white color
+            mov cx,1
+            int 10h
+          
+           
+            call far ptr get_new_position
+            here:
+            mov is_enter,0
+            mov di, offset Second_Player_Name
+            add di,2
+            call far ptr print_string_chat_module_second_player
+            call far ptr print_close_message
+            ret
+
+PRINT_RECEIVED ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+RECEIVE_VALUE_CHAT1 PROC FAR                           ;; GOOD PROC
+;Check that Data is Ready
+mov dx , 3FDH ; Line Status Register
+ in al , dx
+test al , 1
+JZ END_RECEIVE_VALUE ;Not Ready
+;If Ready read the VALUE in Receive data register
+mov dx , 03F8H
+in al , dx
+mov VALUE , al
+
+cmp al,1Bh 
+jne continue_receive_value
+mov is_esc,1
+continue_receive_value:
+
+call FAR ptr  PRINT_RECEIVED
+
+END_RECEIVE_VALUE:
+ret
+RECEIVE_VALUE_CHAT1 ENDP
+
+check_enter PROC FAR
+    cmp al,0dh
+    jnz end_enter
+    ; cmp first_cursor_y,11
+    ; jz 
+    enter_action:
+        cmp first_cursor_y,23
+        jz call_scroll1
+        inc first_cursor_y
+        mov first_cursor_x,0
+        jmp continue
+        call_scroll1:
+            call far ptr check_scroll
+        continue:
+        mov is_enter,1
+        mov ah,2 
+        mov bh,0
+        mov dl,first_cursor_x
+        mov dh,first_cursor_y
+        int 10h
+    end_enter:        
+    ret
+check_enter ENDP
+;description
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+get_new_position PROC FAR
+    cmp first_cursor_x,75d
+    jz new_line 
+       inc first_cursor_x      
+       jmp return
+    new_line:
+      cmp first_cursor_y,23d
+      jz call_scroll
+      inc first_cursor_y            ; move to new line
+      mov first_cursor_x,0
+      jmp return
+      call_scroll:
+         call far ptr check_scroll
+       return:  
+    ret
+get_new_position ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;description
+check_scroll PROC FAR
+    mov ax,0601h
+    mov bh,00
+    mov ch,13d     ;; begin to scroll from y=13
+	mov cl,0
+    
+	mov dh,23d
+	mov dl,79d      
+    int 10h
+    call far ptr update_line
+    mov first_cursor_x,0
+    MOV first_cursor_Y,23d
+    ret
+check_scroll ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+update_line PROC FAR
+    mov ax,0b800h
+	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
+	mov es,ax
+	mov ah,07h
+	mov al,20h
+	mov cx,80  ;
+	rep stosw
+;draw separator
+    call far ptr draw_line
+   
+    ret
+update_line ENDP
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+draw_line_written PROC FAR                     ;;GOOD PROC 
+ 	mov ax,0b800h ;text mode 
+	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
+	mov es,ax
+    mov ah,0fh    ; black background
+	mov al,2Dh    ; '-'
+	mov cx,80
+	rep stosw
+    ret
+draw_line_written ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update_line_written PROC FAR
+    mov ax,0b800h
+	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
+	mov es,ax
+	mov ah,07h
+	mov al,20h
+	mov cx,80  ;
+	rep stosw
+;draw separator
+    ; mov di, offset First_Player_Name
+    ; call far ptr print_string_chat_module_first_player
+    call far ptr draw_line_written
+   
+    ret
+update_line_written ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+check_scroll_written PROC FAR
+    mov ax,0601h
+    mov bh,2d
+    mov ch,0
+	mov cl,0
+	mov dh,11
+	mov dl,79
+    int 10h
+    call far ptr update_line_written
+    mov second_cursor_x,0
+    MOV second_cursor_Y,11
+    ret
+check_scroll_written ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+check_enter_written PROC FAR
+    cmp al,0dh
+    jnz end_enter_written
+    ; cmp first_cursor_y,11
+    ; jz 
+   ; enter_action:
+        cmp second_cursor_y,11
+        jz call_scroll1_written
+        inc second_cursor_y
+        mov second_cursor_x,0
+        jmp continue_check_enter_written
+        call_scroll1_written:
+            call far ptr check_scroll_written
+        continue_check_enter_written:
+        mov is_enter,1
+        mov ah,2 
+        mov bh,0
+        mov dl,second_cursor_x
+        mov dh,second_cursor_y
+        int 10h
+    end_enter_written:        
+    ret
+check_enter_written ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+get_new_position_written PROC FAR
+    cmp second_cursor_x,75
+    jz new_line_written 
+       inc second_cursor_x      
+       jmp end_get_new_position_written
+    new_line_written:
+      cmp second_cursor_y,11d
+      jz call_scroll_written
+      inc second_cursor_y            ; move to new line
+      mov second_cursor_x,0
+      jmp end_get_new_position_written
+      call_scroll_written:
+         call far ptr check_scroll_written
+       end_get_new_position_written:  
+    ret
+get_new_position_written ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+PRINT_WRITTEN PROC FAR
+    
+   
+
+       
+            mov al,VALUE_TO_SEND
+
+            ;check if key pressed is enter key
+            call far ptr check_enter_written
+            cmp is_enter,1
+            jz here_written
+        
+            ;CALL   SEND_VALUE_CHAT1
+            ;set cursor
+            mov ah,2 
+            mov bh,0
+            mov dl,second_cursor_x
+            mov dh,second_cursor_y
+            int 10h
+
+            mov ah,09h
+            mov al,VALUE_TO_SEND
+            mov bh,0
+            mov bl,0fh ;white color
+            mov cx,1
+            int 10h
+           
+            call far ptr get_new_position_written
+            here_written:
+            mov is_enter,0
+            mov di, offset First_Player_Name
+            add di,2
+            call far ptr print_string_chat_module_first_player
+            call far ptr print_close_message
+            ret
+
+PRINT_WRITTEN ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+SEND_VALUE_CHAT1 PROC FAR                                ;; GOOD PROC
+
+;Check that Transmitter Holding Register is Empty
+mov dx , 3FDH ; Line Status Register
+AGAIN: In al , dx ;Read Line Status
+test al , 00100000b
+JZ AGAIN ;Not empty
+;If empty put the VALUE in Transmit data register
+mov dx , 3F8H ; Transmit data register
+mov al,VALUE_TO_SEND
+out dx , al
+RET
+SEND_VALUE_CHAT1 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+READ_FROM_KEYBOAD PROC FAR
+    MOV AH,1
+    INT 16H
+    JZ NO_KEY_PRESSED
+    MOV AH,0 
+    INT 16H
+    MOV VALUE_TO_SEND,AL
+    cmp al,1Bh 
+    jne continue_read_from_keyboard
+
+    mov is_esc,1h
+
+    continue_read_from_keyboard:
+
+    call FAR ptr   SEND_VALUE_CHAT1
+    call FAR ptr PRINT_WRITTEN
+    JMP END_READ_FROM_KEYBOARD
+    NO_KEY_PRESSED:
+    MOV VALUE_TO_SEND,0
+    END_READ_FROM_KEYBOARD:
+    
+RET
+READ_FROM_KEYBOAD ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            CHAT2               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;description
-Game_over_screen PROC
-                                   mov  ah,0ch                          	;this means with int 10h ---> you're drawing a pixel
-	                                 mov  di,0
-	                                 mov  al,img[DI]                       	;the pixel color
-	                                 mov  bh,0                            	;the page number
-	                                 mov  cx,x_position               	;the starting x-position (column)
-	                                 add  cx,imgW                	;as we draw in the reversed order
-	                                 mov  dx,y_position               	;the starting y-position (row)
-	                                 add  dx,imgH               	;as we draw in the reversed order
-	;here we loop for the image size (player_size)
-	fill_over:                         
-	                                 cmp  al,16
-	                                 jz   pass_the_pixel_over
-	                                 int  10h
-	pass_the_pixel_over:                  
-	                                 inc  di
-	                                 mov  al,img[DI]
-	                                 dec  cx
-	                                 cmp  cx,x_position
-	                                 jnz  fill_over                        	;if not zero so we continue to the same row
-	                                 mov  cx,x_position               	;the starting x-position (column)
-	                                 add  cx,imgw                	;as we draw in the reversed order
-	                                 dec  dx                              	;if not zero so we continue to draw the background
-	                                 cmp  dx,y_position
-	                                 jnz  fill_over
-    ret
-Game_over_screen ENDP
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;This function is to take Players name Before entering the game
-Take_User_Data PROC FAR
-	
-    Start:
-	
-                            CALL  FAR PTR CLEAR_SCREEN  ;clear the screen before taking the names
-	
-	
-	
-                            mov ah,0
-	
-                            mov al,02
-	
-                            int 10h     ;this to choose text mode
-	
-	
-                            mov ah,2        
-	
-                            mov dx,01113h
-	
-                            int 10h                ;Position the Cursor
-                            
-                            PRINT_Messages Invalid_Start_msg
-                            
-                            Add DH,2                                                
-                            INT 10H
-
-                          
-                            PRINT_Messages Name_Message_1   ;This MACRO will print a message to ask players to enter their names
-	
-                            Add DH,2                                                
-                            INT 10H                                                        ;Position the Cursor below it by two rows
-	
-                            
-	
-                            Take_First_name:                                ;Start taking the first name untill it reaches the maximum/or the player presses enter
-	
-	
-	
-                                                            mov AH,0AH
-                                                            mov dx,offset First_Player_Name
-                                                            int 21h
-
-                                                            CMP First_Player_Name[2],65
-                                                            JGE GREATER_Than_65
-                                                            JL Wrong_start
-                                                            GREATER_Than_65:
-                                                            CMP First_Player_Name[2],90
-                                                            JLE Between_65_90_or_97_122
-                                                            JG Greater_than_90
-                                                            
-
-Greater_than_90:
-                                                            CMP First_Player_Name[2],97
-                                                            JGE GREATER_Than_97
-                                                            JL Wrong_start
-                                                            GREATER_Than_97:
-                                                            CMP First_Player_Name[2],122
-                                                            JLE Between_65_90_or_97_122
-                                                            JG Wrong_start                                                    
-	
-	
-	Between_65_90_or_97_122:
+chat_module_2 PROC FAR
     
+
+
+    
+
+	mov first_cursor_x , 0 
+	mov first_cursor_y , 14
+	mov second_cursor_x,0
+	mov second_cursor_y,1
 	
-                            mov ah,2        
-	
-                            mov dx,01113h
-	
-                            add dh,4h
-	
-                            int 10h    
-                        
-                            PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
-	
-                            Add DH,2                                                
-	
-                            INT 10H                                                        ;Position the Cursor below it by two rows
-	
-                            
-	
-                            Take_Second_name:                                ;Start taking the Second name untill it reaches the maximum/or the player presses enter
-	
-                                                            mov AH,0AH
-                                                            mov dx,offset Second_Player_Name
-                                                            int 21h
-                                                            CMP Second_Player_Name[2],65
-                                                            JGE GREATER_Than_65_2
-                                                            JL Wrong_start
-                                                            GREATER_Than_65_2:
-                                                            CMP Second_Player_Name[2],90
-                                                            JLE Temp_End
-                                                            JG Greater_than_90_2
-                                                            
+	mov VALUE_TO_SEND ,0
+    mov is_enter ,0
+    mov is_esc , 0
+   	mov is_scroll,0
+    mov VALUE , 0
 
-Greater_than_90_2:
-                                                            CMP Second_Player_Name[2],97
-                                                            JGE GREATER_Than_97_2
-                                                            JL Wrong_start
-                                                            GREATER_Than_97_2:
-                                                            CMP Second_Player_Name[2],122
-                                                            JLE Temp_End
-                                                            JG Wrong_start 
-                                                                                                                    
 
-Wrong_start:
-                            mov ah,2        
-                            mov dx,1620h
-                            int 10h ;Position the Cursor
-                            PRINT_Messages Invalid_Start_msg2
-                            ;;;;;delay;;;;;;
-                                mov cx, 05h ;HIGH WORD.
-                                mov dx, 2420h ;LOW WORD.
-                                mov ah, 86h ;WAIT.
-                                int 15h
 
-                            Jmp Start
+	mov first_cursor_x_chat2 , 0
+	mov first_cursor_y_chat2 , 1
+    mov second_cursor_x_chat2 , 0
+	mov second_cursor_y_chat2 , 14
 
 
 
 
 
-Temp_End:
-
-                                    RET
-Take_User_Data ENDP
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-Main_menu PROC FAR
-
-				FIRST_MENU:
-					mov ah,00
-					mov al,02
-					int 10h
-
-					mov ah,2
-					mov dx,01113h
-					int 10h
-					
-					PRINT_Messages CHAT
-					ADD DH,2
-					INT 10h
-					PRINT_Messages Sky_GAME
-					ADD DH,2
-					INT 10h
-					PRINT_Messages END_GAME_mess
-					
-					Check:
-
-							mov ah,0
-							int 16h
-							; cmp AH,3BH		;if f1 is pressed, go to chat module
-							; JE CHAT_Module
-							cmp AH,3CH		;if f2 is pressed, start the game
-							JE Which_level
-							Cmp AH,01
-							JE End_Game
-							jmp check
-
-					Which_level:
-                                   mov ah,00
-                                    mov al,02
-                                    int 10h
-                                    mov ah,2
-                                    mov dx,01113h
-                                    int 10h
-                                    PRINT_Messages levelone
-                                     ADD DH,2
-                                    INT 10h
-                                    PRINT_Messages leveltwo
-
-                                    mov ah,0
-                                    int 16h
-									cmp al,'1'
-									JE Level_is_Valid
-									cmp al,'2'
-									jne Which_level
-					Level_is_Valid:
-                                    mov level,al
-									CALL FAR PTR Start_Game
-									jmp First_menu
-
-					End_Game :
-							RET
-Main_menu ENDP
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Start_Game PROC FAR
-                ;;SOME INITIALIZATIONS AS the player can play the game multiple times
-                MOV  TIME_AUX,0                
-                MOV PRE_POSITION_X,0          							
-                MOV 	PRE_POSITION_Y,0      						
-                MOV 	PRE_POSITION_X2,0     						
-                MOV 	PRE_POSITION_Y2,0     						
-                MOV 	first_player_X,20     								 
-                MOV 	first_player_Y,50     								 
-                MOV 	first_player_health,5                                							 
-                MOV 	first_player_health_immunity,0 						
-                MOV 	first_player_Freeze,0 							 
-                MOV     First_Is_Collided,0                                    
-                MOV 	second_player_X,270      								
-                MOV 	SECOND_PLAYER_Y,50      								
-                MOV 	second_player_health,5                            
-                MOV 	second_player_health_immunity,0 				
-                MOV 	second_player_Freeze,0 
-                MOV     Second_Is_Collided,0                              					
-                MOV	    X_BARRIER1,10    							 	 
-                MOV	    Y_BARRIER1,140      									 
-                MOV	    X_BARRIER2,260     									 
-                MOV	    Y_BARRIER2,104   
-				
-				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ 	mov ah,0
+    mov al,3
+    int 10h
 
 
-				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-				call FAR PTR draw_background ;draw the background of the Game window
-				call FAR PTR draw_h1
-				call FAR PTR draw_h2
-				CALL FAR PTR draw_p1
-				CALL FAR PTR draw_p2
-				call FAR PTR DRAW_BARRIER1
-				call FAR PTR DRAW_BARRIER2
-
-				;; print name
-				MOV AH,2
-				MOV DX,000DH
-				INT 10H
-				MOV DI,OFFSET First_Player_Name
-				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
-				INC DI
-				mov bl,[di]
-				mov string_name_size,bl
-				INC DI
-				MOV CHOOSE_COLOR,0           ;;PUT 0 IN THIS VARIABLE TO PRINT IN RED FOR THE RED FIRST PLAYER
-				CALL FAR PTR PRINT_STRING
-
-				MOV AH,2
-				MOV DX,010DH
-				INT 10H
-				MOV DI,OFFSET Second_Player_Name
-				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
-				INC DI
-				mov bl,[di]
-				mov string_name_size,bl
-				INC DI
-				MOV CHOOSE_COLOR,1          ;;PUT 1 IN THIS VARIABLE TO PRINT IN BLUE FOR THE BLUE FIRST PLAYER
-				CALL FAR PTR PRINT_STRING
+    mov ah,2 
+    mov dl,first_cursor_x_chat2
+    mov dh,first_cursor_y_chat2
+    int 10h
 
 
-				;;END PRINT NAME 
+     mov di, offset First_Player_Name
+    add di,2
+    call far ptr print_string_chat_module_first_player2
 
-				;;clear names if the player wants to reset the game
-				mov di,offset First_Player_Name 
-				add di,2
-				mov si,offset Second_Player_Name
-				add si,2
-				mov cx,15
-				reset_names:
-				
-				mov [di],'$'
-				mov [si],'$'
-				inc di
-				inc si
-				loop reset_names
+    mov di, offset Second_Player_Name
+    add di,2
+    call far ptr print_string_chat_module_second_player2
 
-				
 
-			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
-				CHECK_TIME:       
+    call far ptr initializing2
+    call far ptr draw_line2
+    call far ptr print_close_message2
+    WHILE1_chat_module_2:
+     mov ah,2 
+    mov dl,first_cursor_x_chat2
+    mov dh,first_cursor_y_chat2
+    int 10h
+    call far ptr READ_FROM_KEYBOARD2
+    call far ptr RECEIVE_VALUE2
+    cmp is_esc,1
+    je end_chat_module_2
+    jmp WHILE1_chat_module_2
 
-							MOV  AH,2Ch                          	;get the system time
-							INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
-							CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
-							JE   CHECK_TIME                      	;if it is the same, check again
-							;if it's different, then draw, move, etc.
-							MOV  TIME_AUX,DL                         ;update time
+    end_chat_module_2:
+    ret
+chat_module_2 ENDP
 
-							cmp level,49    
-							JZ level1
-							
-							level2:
-							CALL FAR PTR MOVE_BARRIERS_2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_close_message2 PROC FAR
+    mov dl,0
+    mov dh,24d
+    mov di,offset close_message
+    print_close_message_loop2:
+    mov ah,2 
+    int 10h 
+     mov al,[di]
+    cmp al,'$'
+    je print_close_message_ret2
+    mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_close_message_loop2
+    print_close_message_ret2:
+    ret
 
-							level1:                
-							CALL FAR PTR MOVE_BARRIERS
-							
+print_close_message2 ENDP
 
-							;check if health is zero, Game Over
-							mov ax,first_player_health
-							cmp ax,0
-							jz Game_Over
 
-							;check if health is zero, Game Over
-							mov ax,second_player_health
-							cmp ax,0
-							jz Game_Over
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_first_player2 PROC FAR
+    mov dl,0
+    mov dh,0
+    print_string_chat_module_loop2:
+     mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module2    
 
-							CALL FAR PTR MOVE_PLAYERS
-							
-							;;;;;;;;;;;;;Flushing the keyboard buffer
-							mov ah,0ch
-							mov al,0
-							int 21h												
-					JMP  CHECK_TIME                      	;after everything checks time again		
+     mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop2
+    ret_print_string_chat_module2:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
 
-			;;;;;;;;;;;GAME ENDING FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
-				Game_Over: 
-				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-				; call FAR PTR draw_background
-				call far PTR Game_over_screen
-					mov ax,second_player_health
-				cmp ax,0
-				jz first_wins
-				mov ax,first_player_health
-				cmp ax,0
-				jz second_wins
-				jmp final
-					first_wins:
-					mov first_player_X,30 
-					mov first_player_y,90
-					call FAR PTR draw_p1
-					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 0eh ;YELLOW
-					MOV CX, 17 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
-					jmp final
-					second_wins:
-					mov second_player_X,30
-					mov second_player_Y,90
-					call FAR PTR draw_p2
-					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 01h ;BLUE
-					MOV CX, 18 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
+    ret
+print_string_chat_module_first_player2 ENDP
 
-				final:
-                mov ah,2        
-                mov dx,1100h
-                int 10h                ;Position the Cursor
-				ADD DH,3
-				PRINT_Messages GAME_OVER_mess
-				mov ah,0
-				int 16h
-				cmp AH,01
-				JNE Final
-			    Call FAR PTR Take_User_Data
 
-	RET
-Start_Game ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+print_string_chat_module_second_player2 PROC FAR
+    mov dl,0
+    mov dh,13d
+    print_string_chat_module_loop_second2:
+     mov ah,2 
+    
+    int 10h
+    mov al,[di]
+    cmp al,'$'
+    je ret_print_string_chat_module_second2  
 
-;prints one characgter in graphics mode
- PRINT_CHAR proc                         ;; PUT IN CHOOSE_COLOR 0H TO PRINT IN RED,ANY VALUE TO PRINT IN BLUE TO PRINT IN BLUE
-		MOV BL,CHOOSE_COLOR
-        mov  al, [di] 
-		CMP BL,0  
-		JE RED_CHAR
-		MOV BL,01H
-		JMP CONTINUE_PRINT_CHAR_FUN
-		RED_CHAR:   
-        mov  bl, 04h  ;Color is red
-		CONTINUE_PRINT_CHAR_FUN:
-        mov  bh, 0    ;Display page
-        mov  ah, 0Eh  ;Teletype
-        int  10h
-        RET
-PRINT_CHAR endp 
-;PRINTS STRING IN GRAPHICS MODE , NEED TO PUT THE OFFSET IN DI BEFORE CALLING AND ALSO CALIBRATE THE CURSOR POSITON
- PRINT_STRING proc
-        PRINT_AGAIN_STRING:
-        MOV AL,[DI]
-		mov bl,string_name_size
-        CMP BL,0
-        JE END_PRINT_STRING
+     mov ah,09h
+     mov al,[di]
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+    inc di 
+    inc dl
+    jmp print_string_chat_module_loop_second2
+    ret_print_string_chat_module_second2:
+     mov ah,09h
+     mov al,':'
+     mov bh,0
+     mov bl,0fh ;white color
+     mov cx,1
+    int 10h
+
+    ret
+print_string_chat_module_second_player2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+initializing2 PROC FAR                 ;;GOOD PROC
+    ;Set Divisor Latch Access Bit
+    mov dx,3fbh ; Line Control Register
+    mov al,10000000b ;Set Divisor Latch Access Bit
+    out dx,al ;Out it
+
+    ; Set LSB byte of the Baud Rate Divisor Latch register.
+    mov dx,3f8h
+    mov al,0ch
+    out dx,al
+
+    ; Set MSB byte of the Baud Rate Divisor Latch register.
+    mov dx,3f9h
+    mov al,00h
+    out dx,al
+
+    ; Set port configuration
+    mov dx,3fbh
+    mov al,00011011b
+    ; 0:Access to Receiver buffer, Transmitter buffer
+    ; 0:Set Break disabled
+    ; 011:Even Parity
+    ; 0:One Stop Bit
+    ; 11:8bits
+    out dx,al
+    ret  
+initializing2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;description
+draw_line2 PROC FAR                        ;;GOOD PROC FAR 
+ 	mov ax,0b800h ;text mode 
+	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
+	mov es,ax
+    mov ah,0fh    ; black background
+	mov al,2Dh    ; '-'
+	mov cx,80
+	rep stosw
+    ret
+draw_line2 ENDP
+
+
+
+; SEND_VALUE_CHAT1 PROC FAR                                 ;; GOOD PROC FAR
+
+; ;Check that Transmitter Holding Register is Empty
+; mov dx , 3FDH ; Line Status Register
+; AGAIN: In al , dx ;Read Line Status
+; test al , 00100000b
+; JZ AGAIN ;Not empty
+; ;If empty put the VALUE in Transmit data register
+; mov dx , 3F8H ; Transmit data register
+; mov al,VALUE_TO_SEND
+; out dx , al
+; RET
+; SEND_VALUE_CHAT1 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_RECEIVED2 PROC FAR
+    
+   
+
+        ;get_key_pressed:
+            ; mov ah,0
+            ; int 16h
+            ;mov VALUE,al  ; holds the char required to be sent
+            mov al,VALUE
+
+            ;check if key pressed is enter key
+            call far ptr check_enter2
+            cmp is_enter,1
+            jz here2_print
         
-        CALL FAR PTR PRINT_CHAR
-        INC DI
-		dec string_name_size
-        JMP PRINT_AGAIN_STRING
-		;loop PRINT_AGAIN_STRING
-        END_PRINT_STRING:
+            ;CALL   SEND_VALUE_CHAT1
+            ;set cursor
+            mov ah,2 
+            mov bh,0
+            mov dl,first_cursor_x_chat2
+            mov dh,first_cursor_y_chat2
+            int 10h
 
-        RET
+            mov ah,09h
+            mov al,VALUE
+            mov bh,0
+            mov bl,0fh ;white color
+            mov cx,1
+            int 10h
+           
+            call far ptr get_new_position2
+            here2_print:
+            mov is_enter,0
+            mov di, offset First_Player_Name
+            add di,2
+            call far ptr print_string_chat_module_first_player2
+            call far ptr print_close_message2
+            ret
+
+PRINT_RECEIVED2 ENDP
 
 
-PRINT_STRING endp 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+RECEIVE_VALUE2 PROC FAR                            ;; GOOD PROC FAR
+;Check that Data is Ready
+mov dx , 3FDH ; Line Status Register
+ in al , dx
+test al , 1
+JZ END_RECEIVE_VALUE2 ;Not Ready
+;If Ready read the VALUE in Receive data register
+mov dx , 03F8H
+in al , dx
+mov VALUE , al
+
+cmp al,1Bh
+jne continue_receive_value2
+mov is_esc,1
+continue_receive_value2:
+call FAR ptr  PRINT_RECEIVED2
+
+END_RECEIVE_VALUE2:
+ret
+RECEIVE_VALUE2 ENDP
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+check_enter2 PROC FAR
+    cmp al,0dh
+    jnz end_enter2
+    ; cmp first_cursor_y_chat2,11
+    ; jz 
+    enter_action2:
+        cmp first_cursor_y_chat2,11
+        jz call_scroll12
+        inc first_cursor_y_chat2
+        mov first_cursor_x_chat2,0
+        jmp continue2_enter
+        call_scroll12:
+            call far ptr check_scroll2
+        continue2_enter:
+        mov is_enter,1
+        mov ah,2 
+        mov bh,0
+        mov dl,first_cursor_x_chat2
+        mov dh,first_cursor_y_chat2
+        int 10h
+    end_enter2:        
+    ret
+check_enter2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+
+get_new_position2 PROC FAR
+    cmp first_cursor_x_chat2,75
+    jz new_line2 
+       inc first_cursor_x_chat2      
+       jmp return2_new_pos
+    new_line2:
+      cmp first_cursor_y_chat2,11d
+      jz call_scroll2
+      inc first_cursor_y_chat2            ; move to new line
+      mov first_cursor_x_chat2,0
+      jmp return2_new_pos
+      call_scroll2:
+         call far ptr check_scroll2
+       return2_new_pos:  
+    ret
+get_new_position2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;description
+check_scroll2 PROC FAR
+    mov ax,0601h
+    mov bh,00
+    mov ch,0
+	mov cl,0
+	mov dh,11
+	mov dl,79
+    int 10h
+    call far ptr update_line2
+    mov first_cursor_x_chat2,0
+    MOV first_cursor_y_chat2,11
+    ret
+check_scroll2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;description
+update_line2 PROC FAR
+    mov ax,0b800h
+	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
+	mov es,ax
+	mov ah,07h
+	mov al,20h
+	mov cx,80  ;
+	rep stosw
+;draw separator
+    call far ptr draw_line2
+   
+    ret
+update_line2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+draw_line_written2 PROC FAR                        ;;GOOD PROC FAR 
+ 	mov ax,0b800h ;text mode 
+	mov DI,1920     ; each row 80 column each one 2 bits 80*2*12
+	mov es,ax
+    mov ah,0fh    ; black background
+	mov al,2Dh    ; '-'
+	mov cx,80
+	rep stosw
+    ret
+draw_line_written2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+update_line_written2 PROC FAR
+    mov ax,0b800h
+	mov di,1760   ; each row 80 column each one 2 bits 80*2*11
+	mov es,ax
+	mov ah,07h
+	mov al,20h
+	mov cx,80  ;
+	rep stosw
+;draw separator
+    call far ptr draw_line_written2
+   
+    ret
+update_line_written2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+check_scroll_written2 PROC FAR
+    mov ax,0601h
+    mov bh,00
+    mov ch,13d
+	mov cl,0
+	mov dh,23d
+	mov dl,79
+    int 10h
+    call far ptr update_line_written2
+    mov second_cursor_x_chat2,0
+    MOV second_cursor_y_chat2,23d
+    ret
+check_scroll_written2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+check_enter_written2 PROC FAR
+    cmp al,0dh
+    jnz end_enter_written2
+    ; cmp first_cursor_y_chat2,11
+    ; jz 
+   ; enter_action:
+        cmp second_cursor_y_chat2,23
+        jz call_scroll1_written2
+        inc second_cursor_y_chat2
+        mov second_cursor_x_chat2,0
+        jmp continue_check_enter_written2
+        call_scroll1_written2:
+            call far ptr check_scroll_written2
+        continue_check_enter_written2:
+        mov is_enter,1
+        mov ah,2 
+        mov bh,0
+        mov dl,second_cursor_x_chat2
+        mov dh,second_cursor_y_chat2
+        int 10h
+    end_enter_written2:        
+    ret
+check_enter_written2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;description
+
+
+get_new_position_written2 PROC FAR
+    cmp second_cursor_x_chat2,75
+    jz new_line_written2
+       inc second_cursor_x_chat2      
+       jmp end_get_new_position_written2
+    new_line_written2:
+      cmp second_cursor_y_chat2,23d
+      jz call_scroll_written2
+      inc second_cursor_y_chat2            ; move to new line
+      mov second_cursor_x_chat2,0
+      jmp end_get_new_position_written2
+      call_scroll_written2:
+         call far ptr check_scroll_written2
+       end_get_new_position_written2:  
+    ret
+get_new_position_written2 ENDP
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_WRITTEN2 PROC FAR
+    
+   
+
+       
+            mov al,VALUE_TO_SEND
+
+            ;check if key pressed is enter key
+            call far ptr check_enter_written2
+            cmp is_enter,1
+            jz here_written2
+        
+            ;CALL   SEND_VALUE_CHAT1
+            ;set cursor
+            mov ah,2 
+            mov bh,0
+            mov dl,second_cursor_x_chat2
+            mov dh,second_cursor_y_chat2
+            int 10h
+
+            mov ah,09h
+            mov al,VALUE_TO_SEND
+            mov bh,0
+            mov bl,0fh ;white color
+            mov cx,1
+            int 10h
+           
+            call far ptr get_new_position_written2
+            here_written2:
+            mov is_enter,0
+            mov di, offset Second_Player_Name
+            add di,2
+            call far ptr print_string_chat_module_second_player2
+            call far ptr print_close_message2
+            ret
+
+PRINT_WRITTEN2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+SEND_VALUE2 PROC FAR                                 ;; GOOD PROC FAR
+
+;Check that Transmitter Holding Register is Empty
+mov dx , 3FDH ; Line Status Register
+AGAIN2: In al , dx ;Read Line Status
+test al , 00100000b
+JZ AGAIN2 ;Not empty
+;If empty put the VALUE in Transmit data register
+mov dx , 3F8H ; Transmit data register
+mov al,VALUE_TO_SEND
+out dx , al
+RET
+SEND_VALUE2 ENDP
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+READ_FROM_KEYBOARD2 PROC FAR
+    MOV AH,1
+    INT 16H
+    JZ NO_KEY_PRESSED2
+    MOV AH,0 
+    INT 16H
+    MOV VALUE_TO_SEND,AL
+
+    cmp al,1Bh 
+    jne continue_read_from_keyboard2
+    mov is_esc,1
+
+    continue_read_from_keyboard2:
+    call FAR ptr   SEND_VALUE2
+    call FAR ptr PRINT_WRITTEN2
+    JMP END_READ_FROM_KEYBOARD2
+    NO_KEY_PRESSED2:
+    MOV VALUE_TO_SEND,0
+    END_READ_FROM_KEYBOARD2:
+    
+RET
+READ_FROM_KEYBOARD2 ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 END MAIN

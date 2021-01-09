@@ -44,7 +44,7 @@ ENDM
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
-   First_Player_Name  DB '16','?',16 dup('$')
+    First_Player_Name  DB 16,?,17 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -53,7 +53,8 @@ ENDM
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
     First_Is_Collided DB 0                                   ;Boolean Variable To check if the player is colliding
-    Second_Player_Name  DB '16','?',16 dup('$')
+    Second_Player_Name  DB 16,?,17 dup('$')
+	string_name_size    db 0
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
 	second_player_health DW 5                                ;Number of hearts to the second player
@@ -2637,6 +2638,8 @@ Start_Game PROC FAR
 				MOV DI,OFFSET First_Player_Name
 				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
 				INC DI
+				mov bl,[di]
+				mov string_name_size,bl
 				INC DI
 				MOV CHOOSE_COLOR,0           ;;PUT 0 IN THIS VARIABLE TO PRINT IN RED FOR THE RED FIRST PLAYER
 				CALL FAR PTR PRINT_STRING
@@ -2647,6 +2650,8 @@ Start_Game PROC FAR
 				MOV DI,OFFSET Second_Player_Name
 				;THE FIRST 2 ARE GARBAGE VALUE ,THE SIZE AND ?
 				INC DI
+				mov bl,[di]
+				mov string_name_size,bl
 				INC DI
 				MOV CHOOSE_COLOR,1          ;;PUT 1 IN THIS VARIABLE TO PRINT IN BLUE FOR THE BLUE FIRST PLAYER
 				CALL FAR PTR PRINT_STRING
@@ -2783,13 +2788,15 @@ PRINT_CHAR endp
  PRINT_STRING proc
         PRINT_AGAIN_STRING:
         MOV AL,[DI]
-        CMP AL,'$'
-        JZ END_PRINT_STRING
+		mov bl,string_name_size
+        CMP BL,0
+        JE END_PRINT_STRING
         
         CALL FAR PTR PRINT_CHAR
         INC DI
+		dec string_name_size
         JMP PRINT_AGAIN_STRING
-
+		;loop PRINT_AGAIN_STRING
         END_PRINT_STRING:
 
         RET

@@ -43,9 +43,9 @@ main PROC far
 
     
 
-  ;  call far ptr chat_module
+    call far ptr chat_module
 
-    call far ptr chat_module_2
+  ;  call far ptr chat_module_2
     
     
 
@@ -83,7 +83,7 @@ chat_module PROC
     mov dh,first_cursor_y
     int 10h
     call far ptr READ_FROM_KEYBOAD
-    call far ptr RECEIVE_VALUE
+    call far ptr RECEIVE_VALUE_CHAT1
     cmp is_esc,1d 
     je ret_chat_module
     
@@ -241,7 +241,7 @@ PRINT_RECEIVED PROC
             cmp is_enter,1
             jz here
         
-            ;CALL   SEND_VALUE
+            ;CALL   SEND_VALUE_CHAT1
             ;set cursor
             mov ah,2 
             mov bh,0
@@ -269,7 +269,7 @@ PRINT_RECEIVED PROC
 PRINT_RECEIVED ENDP
 
 
-RECEIVE_VALUE PROC                            ;; GOOD PROC
+RECEIVE_VALUE_CHAT1 PROC                            ;; GOOD PROC
 ;Check that Data is Ready
 mov dx , 3FDH ; Line Status Register
  in al , dx
@@ -289,7 +289,7 @@ CALL  PRINT_RECEIVED
 
 END_RECEIVE_VALUE:
 ret
-RECEIVE_VALUE ENDP
+RECEIVE_VALUE_CHAT1 ENDP
 
 check_enter PROC
     cmp al,0dh
@@ -480,7 +480,7 @@ PRINT_WRITTEN PROC
             cmp is_enter,1
             jz here_written
         
-            ;CALL   SEND_VALUE
+            ;CALL   SEND_VALUE_CHAT1
             ;set cursor
             mov ah,2 
             mov bh,0
@@ -510,7 +510,7 @@ PRINT_WRITTEN ENDP
 
 
 
-SEND_VALUE PROC                                 ;; GOOD PROC
+SEND_VALUE_CHAT1 PROC                                 ;; GOOD PROC
 
 ;Check that Transmitter Holding Register is Empty
 mov dx , 3FDH ; Line Status Register
@@ -522,7 +522,7 @@ mov dx , 3F8H ; Transmit data register
 mov al,VALUE_TO_SEND
 out dx , al
 RET
-SEND_VALUE ENDP
+SEND_VALUE_CHAT1 ENDP
 
 
 READ_FROM_KEYBOAD PROC
@@ -539,7 +539,7 @@ READ_FROM_KEYBOAD PROC
 
     continue_read_from_keyboard:
 
-    CALL   SEND_VALUE
+    CALL   SEND_VALUE_CHAT1
     CALL PRINT_WRITTEN
     JMP END_READ_FROM_KEYBOARD
     NO_KEY_PRESSED:
@@ -726,7 +726,7 @@ draw_line2 ENDP
 
 
 
-; SEND_VALUE PROC                                 ;; GOOD PROC
+; SEND_VALUE_CHAT1 PROC                                 ;; GOOD PROC
 
 ; ;Check that Transmitter Holding Register is Empty
 ; mov dx , 3FDH ; Line Status Register
@@ -738,7 +738,7 @@ draw_line2 ENDP
 ; mov al,VALUE_TO_SEND
 ; out dx , al
 ; RET
-; SEND_VALUE ENDP
+; SEND_VALUE_CHAT1 ENDP
 
 
 PRINT_RECEIVED2 PROC
@@ -756,7 +756,7 @@ PRINT_RECEIVED2 PROC
             cmp is_enter,1
             jz here2_print
         
-            ;CALL   SEND_VALUE
+            ;CALL   SEND_VALUE_CHAT1
             ;set cursor
             mov ah,2 
             mov bh,0
@@ -981,7 +981,7 @@ PRINT_WRITTEN2 PROC
             cmp is_enter,1
             jz here_written2
         
-            ;CALL   SEND_VALUE
+            ;CALL   SEND_VALUE_CHAT1
             ;set cursor
             mov ah,2 
             mov bh,0

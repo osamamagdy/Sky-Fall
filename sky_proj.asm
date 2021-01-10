@@ -44,7 +44,8 @@ ENDM
 	PRE_POSITION_Y      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_X2       DW  0								 ;Temp variable used when moving position to check first if it causes collisions
 	PRE_POSITION_Y2      DW  0								 ;Temp variable used when moving position to check first if it causes collisions
-    First_Player_Name  DB 16,?,17 dup('$')
+    
+	First_Player_Name  DB 16,?,17 dup('$')
 	first_player_X      DW  50								 ;The starting X-position of player one
 	first_player_Y      DW  50								 ;The starting Y-position of player one
 	first_player_health DW  5                                 ;Number of hearts to the first player
@@ -53,7 +54,8 @@ ENDM
 	first_player_health_immunity DW 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
 	first_player_Freeze DW 0								 ;Duration for which the player is frozen
     First_Is_Collided DB 0                                   ;Boolean Variable To check if the player is colliding
-    Second_Player_Name  DB 16,?,17 dup('$')
+    
+	Second_Player_Name  DB 16,?,17 dup('$')
 	string_name_size    db 0
 	second_player_X     DW  270								 ;The starting X-position of player two
 	SECOND_PLAYER_Y     DW  50								 ;The starting Y-position of player two
@@ -680,21 +682,6 @@ Start_Game PROC FAR
 				CALL FAR PTR PRINT_STRING
 
 
-				;;END PRINT NAME 
-
-				;;clear names if the player wants to reset the game
-				mov di,offset First_Player_Name 
-				add di,2
-				mov si,offset Second_Player_Name
-				add si,2
-				mov cx,15
-				reset_names:
-				
-				mov [di],'$'
-				mov [si],'$'
-				inc di
-				inc si
-				loop reset_names
 
 				
 
@@ -786,6 +773,23 @@ Start_Game PROC FAR
 				int 16h
 				cmp AH,01
 				JNE Final
+
+				;;clear names if the player wants to reset the game
+				mov di,offset First_Player_Name 
+				add di,2
+				mov si,offset Second_Player_Name
+				add si,2
+				mov cx,15
+				
+				
+				;;END PRINT NAME 
+				reset_names:
+				
+				mov [di],'$'
+				mov [si],'$'
+				inc di
+				inc si
+				loop reset_names
 			    Call FAR PTR Take_User_Data
 
 	RET
@@ -906,13 +910,62 @@ MOVE_PLAYERS ENDP
 start_in_game_chatting proc FAR
 start_in_game_chatting_again:
 
-    ;;print name 1 in pos 21
+	print_first_name_in_game_chat:
+
+    mov SI, OFFSET First_Player_Name
+	inc SI
+	mov cx,0
+	mov cx,5
+	inc SI
+	mov  dl, 0   ;Column (0->39)
+	mov  dh, 21   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	mov  bh, 0    ;Display page
+
+    print_first_name_in_game_chat_loop :
+	
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+	mov  al, [SI]
+	mov  bl, 0Ch  ;Color is red
+	mov  bh, 0    ;Display page
+	mov  ah, 0Eh  ;Teletype
+	int  10h
+	INC SI ;the next char
+	INC DL ;increase col
+	Loop print_first_name_in_game_chat_loop
+	
+	
 	;if x=79  and erase all and print name again
 	;print chars from keyboard
 	;if  enter pressed  then erase backward all and prnit name agaibn 
 	;send the character 
 
 	;print name2 in pos 22;
+	print_second_name_in_game_chat:
+
+    mov SI, OFFSET Second_Player_Name
+	inc SI
+	mov cx,0
+	mov cx,5
+	inc SI
+	mov  dl, 0   ;Column (0->39)
+	mov  dh, 22   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	mov  bh, 0    ;Display page
+
+    print_second_name_in_game_chat_loop :
+	
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+	mov  al, [SI]
+	mov  bl, 0Ch  ;Color is red
+	mov  bh, 0    ;Display page
+	mov  ah, 0Eh  ;Teletype
+	int  10h
+	INC SI ;the next char
+	INC DL ;increase col
+	Loop print_second_name_in_game_chat_loop
+	
+	
 	;if x=79 erase all backward and print name 
 	;if recevived print character 
 	;if enter rceived erase backwards ;if x=79  erase all and print name again

@@ -224,6 +224,8 @@ ENDM
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
     END_GAME_mess DB '*To End the Program Press ESC $'
+	play_against_meg       db "you are playing against $"
+	WAITING_MESSAGE DB 'PLEASE WAIT FOR OTHER PLAYER RESPONSE $'
     levelone DB  '* press 1 for level 1 $'
     leveltwo DB  '* press 2 for level 2 $'
     Name_Message_1 DB '*Enter the RED player name,Press Enter to porceed $'
@@ -428,6 +430,7 @@ Game_over_screen ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;This function is to take Players name Before entering the game
 Take_User_Data PROC FAR
 	
@@ -446,12 +449,11 @@ Take_User_Data PROC FAR
 	
                             mov ah,2        
 	
-                            mov dx,01113h
+                            mov dx,0a0ah
 	
                             int 10h                ;Position the Cursor
                             
-                            PRINT_Messages Invalid_Start_msg
-                            
+                             ;PRINT_Messages Name_Message_1 
                             Add DH,2                                                
                             INT 10H
 
@@ -489,71 +491,135 @@ Greater_than_90:
                                                             JLE Between_65_90_or_97_122
                                                             JG Wrong_start                                                    
 	
-	
-	Between_65_90_or_97_122:
-    
-	
-                            mov ah,2        
-	
-                            mov dx,01113h
-	
-                            add dh,4h
-	
-                            int 10h    
-                        
-                            PRINT_Messages Name_Message_2   ;This MACRO will print a message to ask players to enter their names
-	
-                            Add DH,2                                                
-	
-                            INT 10H                                                        ;Position the Cursor below it by two rows
-	
-                            
-	
-                            Take_Second_name:                                ;Start taking the Second name untill it reaches the maximum/or the player presses enter
-	
-                                                            mov AH,0AH
-                                                            mov dx,offset Second_Player_Name
-                                                            int 21h
-                                                            CMP Second_Player_Name[2],65
-                                                            JGE GREATER_Than_65_2
-                                                            JL Wrong_start
-                                                            GREATER_Than_65_2:
-                                                            CMP Second_Player_Name[2],90
-                                                            JLE Temp_End
-                                                            JG Greater_than_90_2
-                                                            
-
-Greater_than_90_2:
-                                                            CMP Second_Player_Name[2],97
-                                                            JGE GREATER_Than_97_2
-                                                            JL Wrong_start
-                                                            GREATER_Than_97_2:
-                                                            CMP Second_Player_Name[2],122
-                                                            JLE Temp_End
-                                                            JG Wrong_start 
-                                                                                                                    
-
-Wrong_start:
+	Wrong_start:
+                           
+                         
                             mov ah,2        
                             mov dx,1620h
-                            int 10h ;Position the Cursor
+                            int 10h                ;Position the Cursor
                             PRINT_Messages Invalid_Start_msg2
                             ;;;;;delay;;;;;;
-                                mov cx, 05h ;HIGH WORD.
+                                mov cx, 25h      ;HIGH WORD.
                                 mov dx, 2420h ;LOW WORD.
-                                mov ah, 86h ;WAIT.
+                                mov ah, 86h    ;WAIT.
                                 int 15h
 
-                            Jmp Start
+                            Jmp Start 
+	Between_65_90_or_97_122:
+				
+				MOV AH,2   ;MOVE CURSOR TO PRINT WAITING MESSAGE
+				MOV DX,140fH
+				int 10h
 
+				mov ah,9
+				mov dx,offset WAITING_MESSAGE
+				int 21h
+				mov di,offset First_Player_Name
+				mov si ,offset Second_Player_Name
+				mov cl, First_Player_Name[1]     ;actual size
 
+;;;;;;;;;;;;;;;;;;;;;; SEND THE ACUTUAL SIZE OF PLAYER NAME
+				 mov dx,3fdh
 
+				;wait till we are able to send
+				WAIT_FOR_SEND:
+				in al,dx
+				test al,00100000b
+				jz WAIT_FOR_SEND        
 
+			;WE CAN SEND NOW
+				mov dx,3f8h
+				mov al,cl
+				out dx,al                                                    
+
+;;;;;;;;;;;;;	RECEIVE THE ACUTUAL SIZE OF PLAYER NAME
+                CHECK_size_AGAIN:
+				mov dx,3fdh
+				in al,dx
+				test al,1
+				jz CHECK_size_AGAIN  ;if nothing received go to the begining
+				
+				;if received
+				mov dx,03f8h
+				in al,dx
+				mov ch,al
+				
+		add di,2
+		add si,2
+;;;;;;;;;;;;;;;;;;;;; SEND AND RECEIVE THE PLAYER NAMES ;;;;;
+	START_NAME_SEND_REC:
+	
+        mov dx,3fdh
+        ;wait till we are able to send
+        in al,dx
+        test al,00100000b
+        jz CHECK_AGAIN_SR        
+        
+        cmp cl,0
+        je reso
+        ;when we are able send
+        mov dx,3f8h
+        mov al,[di]
+        out dx,al
+        inc di
+        dec cl
+
+        reso:
+        mov dx,3fdh
+        in al,dx
+        test al,1
+        jz CHECK_AGAIN_SR  ;if nothing received go to the begining
+        
+        ;if received
+        mov dx,03f8h
+        in al,dx
+
+		;put the name recieved in the second player
+        mov [si],al
+        inc si
+        dec ch
+
+        CHECK_AGAIN_SR:;check if we finished and if not go to the begining
+        cmp cl,0
+        jnz START_NAME_SEND_REC
+
+        cmp ch,0
+        jnz START_NAME_SEND_REC
+
+	;;;;;;;;;;;;;;;;;;;;;;;;;;; MAIN MENU ENDED -> GO TO MENUBAR ;;;;;;;;;
+	;; CLEAR SCREEN ;;
+        mov ah,0                          
+        mov al,3       
+        int 10h
+
+;;;;;;;SET CURSOR POSITION AND PRINT PLAY_AGAINST MESSAGE        
+        mov ah,2        
+        mov dx,0a04h
+        int 10h  
+
+        mov ah,9
+        mov dx,offset play_against_meg 
+        int 21h
+;;;;;;;SET CURSOR POSITION AND PRINT PLAYER NAME MESSAGE 
+        mov ah,2        
+        mov dx,0a1Ch
+        int 10h
+
+        mov ah,9
+        mov dx,offset Second_Player_Name+1
+        int 21h
+
+	;--------- DELAY FOR 5 SECOND  ----------------
+		    mov cx, 50h      ;HIGH WORD.
+            mov dx, 4840h ;LOW WORD.
+            mov ah, 86h    ;WAIT.
+            int 15h
 
 Temp_End:
 
                                     RET
 Take_User_Data ENDP
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -576,7 +642,19 @@ Main_menu PROC FAR
 					ADD DH,2
 					INT 10h
 					PRINT_Messages END_GAME_mess
-					
+										
+			;;;;;;;;;;;; DRAW LINE  ;;;;;;;;;;;;;
+					mov ah,02
+					mov dx, 1500h
+					int 10h
+
+					MOV AH,09H
+					MOV AL,'-'
+					MOV BH,0
+					MOV BL,02
+					MOV CX ,80
+					INT 10H
+
 					Check:
 
 							mov ah,0
@@ -4015,5 +4093,38 @@ READ_FROM_KEYBOARD2 PROC FAR
 RET
 READ_FROM_KEYBOARD2 ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CHECK_RECIEVED_IVITATION PROC FAR
+
+;Check that Transmitter Holding Register is Empty
+			mov dx , 3FDH ; Line Status Register
+			Recieved_AGAIN: In al , dx ;Read Line Status
+			test al , 00100000b
+			JZ Recieved_AGAIN ;Not empty
+;If empty put the VALUE in Transmit data register
+			mov dx , 3F8H ; Transmit data register
+			mov al,VALUE
+			out dx , al
+			Receiving a value
+			;Check that Data is Ready
+mov dx , 3FDH ; Line Status Register
+CHK: in al , dx
+test al , 1
+JZ CHK ;Not Ready
+;If Ready read the VALUE in Receive data register
+mov dx , 03F8H
+in al , dx
+mov VALUE , al
+
+
+CHECK_RECIEVED_IVITATION ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+CHECK_SENT_IVITATION PROC FAR
+
+
+
+CHECK_SENT_IVITATION ENDP
+
 
 END MAIN

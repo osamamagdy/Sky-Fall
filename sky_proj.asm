@@ -881,6 +881,7 @@ MOVE_PLAYERS PROC FAR
 									cmp AL,1Bh ;this is escape to go to chat mode 
 									jne First_moved
 									call far PTR start_in_game_chatting
+									jmp End_Moving
 									First_moved:
 									cmp AH , 40h ;check if it is the second player( Scan Code in AH, if greater than 40h --> it must be second player)
 									JG Second_MOVED
@@ -915,7 +916,7 @@ start_in_game_chatting_again:
     mov SI, OFFSET First_Player_Name
 	inc SI
 	mov cx,0
-	mov cx,5
+	mov cl,First_Player_Name+1
 	inc SI
 	mov  dl, 0   ;Column (0->39)
 	mov  dh, 21   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
@@ -946,7 +947,7 @@ start_in_game_chatting_again:
     mov SI, OFFSET Second_Player_Name
 	inc SI
 	mov cx,0
-	mov cx,5
+	mov cl,Second_Player_Name+1
 	inc SI
 	mov  dl, 0   ;Column (0->39)
 	mov  dh, 22   ;Row (0-> 24) and we're only printing in the 1/5 of the screen

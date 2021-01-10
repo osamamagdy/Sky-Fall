@@ -194,6 +194,7 @@ ENDM
 	GAME_SLAVE DB 0
 	CHAT_MASTER DB 0
 	CHAT_SLAVE DB 0
+	LEVEL_CHOSEN DB 0
 	GAME_INVITATION_SEND_MSG DB 'YOU SENT A GAME INVITATION TO $' 
 	GAME_INVITATION_REC_MSG DB ' sent A GAME INVITATION TO YOU  $'
 	CHAT_INVITATION_SEND_MEG DB 'YOU SENT A CHAT INVITATION TO $' 
@@ -353,6 +354,33 @@ GAME_OVER_mess db 'Press ESC Key to Return to main menu $'
 
 Goodbye_mess db 'Goodbye *^-^* $'
 
+;;;;;;;CHAT ;;; 
+	First_cursor_X         DB  6
+	First_cursor_Y         DB  1
+
+	; SECOND CURSOR USED FOR RECEIVING
+	SECOND_CURSOR_X        DB  6
+	SECOND_CURSOR_Y        DB  13
+
+	start_position_x       equ 6
+
+	LETTER_SENT            DB  ?
+	LETTER_RECEIVING       DB  ?
+
+
+	Line_status_register   equ 3FDH
+	TRANSMIT_DATA_REGISTER equ 3F8H
+	Line_Control_Register  equ 3fbh
+
+	end_line               db  76
+
+	IS_ENTER               DB  0
+	IS_BACKSPACE           DB  0
+	;players Name
+	first_chatter          db  'chatter 1 : $'
+	second_chatter         db  'chatter 2 : $'
+	chat_end_string        db  'To end chat press ESC $'
+
 level DB 0
 .code
 MAIN PROC FAR
@@ -371,383 +399,6 @@ MAIN PROC FAR
 									RET
 MAIN ENDP
 	
-
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-Main_menu PROC FAR
-
-				FIRST_MENU:
-					mov ah,00
-					mov al,02
-					int 10h
-
-					mov ah,2
-					mov dx,0a13h
-					int 10h
-					
-					PRINT_Messages CHAT
-					ADD DH,2
-					INT 10h
-					PRINT_Messages Sky_GAME
-					ADD DH,2
-					INT 10h
-					PRINT_Messages END_GAME_mess
-					
-		;;;;;;;;;;;; DRAW LINE  ;;;;;;;;;;;;;
-				mov ah,02
-				mov dx, 1500h
-				int 10h
-
-				MOV AH,09H
-				MOV AL,'-'
-				MOV BH,0
-				MOV BL,02
-				MOV CX ,80
-				INT 10H
-
-			;;;;;;;;;;  CHECK FOR INVITATIONS ;;;;;;;;;;;;;
-			CHECK_INVITATION:
-				mov dx,3fdh
-        		in al,dx
-        		test al,1
-				jz CHECK_INVITAT_again
-				jmp if_receive
-				; CHECK_INVITAT_again:
-				; 	mov ah,1
-     			;     int 16h
-      			; 	jz CHECK_INVITATION
-				if_receive:
-					mov dx,03f8h
-					in al,dx
-					cmp AL,0    ;CHECK IF F1 PRESSED CHAT INVENTATION
-					jE GO_CHAT_INVET_REC
-					CMP AH,1   ;CHECK IF F2 PRESSED GAME INVENTATION
-					JE   GO_GAME_INVENT_REC_TEMP
-					;CMP AH,01
-					;JE End_Game
-					CHECK_INVITAT_again:
-					mov ah,1
-     			    int 16h
-      				jz CHECK_INVITATION
-
-	;;;;;;;;;;;;;;;;;; SEND INVITAION ;;;;;;;;;;;;;;;;;;
-			MOV AH,0
-			INT 16h
-			CMP AH,3BH
-			JE  GO_CHAT_INVET_SEND
-			CMP AH,3CH
-			JE 	GO_GAME_INVENT_SEND_TEMP	
-			;CMP AH,01
-			;JE End_Game
-			JMP CHECK_INVITATION
-
-	;;;;;;;;;;;;;;;;;;; IF JUMP TO GO_CHAT_INVET_SEND  ;;;;;;;;;;;;		
-		GO_CHAT_INVET_SEND:
-			;;;;; MOVE THE CURSOR TO THE POSITION IN WHICH SENT INVETATION APPEAR
-				mov ah,02
-				mov dx, 1600h
-				int 10h
-				
-				MOV AH,09H
-				MOV AL,' '
-				MOV BH,0
-				MOV BL,02
-				MOV CX ,80
-				INT 10H
-			MOV AH,02
-			MOV DX,1600H
-			INT 10H
-
-			PRINT_Messages CHAT_INVITATION_SEND_MEG
-
-			ADD DL,2
-
-		
-        	PRINT_Messages Second_Player_Name+1
-        	
-
-        	mov dx,3fdh
-
-        	loop_until_ready:
-        	in al,dx
-        	test al,00100000b
-        	jz loop_until_ready        
-        
-;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
-         	mov dx,3f8h
-        	mov al,0
-        	out dx,al
-
-			MOV CHAT_MASTER,1  ;;;THE PLAYER HOW SENT THE CHAT INVITAION IS THE 
-			MOV CHAT_SLAVE,0   ;;; GAME MASTER'
-			mov GAME_MASTER,0
-			MOV GAME_SLAVE,0
-			JMP CHECK_INVITATION
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		;;;;;;;	IF I RECEIVE A CHAT INVITAION ;;;;;;;
-GO_GAME_INVENT_SEND_TEMP:
-JMP GO_GAME_INVENT_SEND
-GO_GAME_INVENT_REC_TEMP:
-JMP GO_GAME_INVENT_REC
-
-GO_CHAT_INVET_REC:
-
-		cmp CHAT_MASTER,0
-		   jNz ACCEPT
-		   MOV  ah,02
-			mov dx, 1800h
-			int 10h
-
-			MOV AH,09H
-			MOV AL,' '
-			MOV BH,0
-			MOV BL,02
-			MOV CX ,80
-			INT 10H
-
-			MOV AH,02
-			MOV DX,1800H
-			INT 10H
-        
-        
-        PRINT_Messages Second_Player_Name+1
-      
-		ADD DL,2
-    
-        PRINT_Messages CHAT_INVITATION_REC_MEG
-       
-        jmp CHECK_INVITAT_again
-        
-
-        ACCEPT:
-		mov dx,3fdh
-        loop_until_ready_2:
-        in al,dx
-        test al,00100000b
-        jz loop_until_ready_2        
-;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
-        mov dx,3f8h
-        mov al,0
-        out dx,al
-        jmp chatpage			
-;----------------------------------------------------;
-		GO_GAME_INVENT_SEND:	
-		;;;;;;;; CLEAR THE LINE 23 BEFORE PRINTING THE NEXT INVITATION MSG ;;;;;;;
-		;;; MOVE THE CURSOR TO WRITE
-		MOV AH,02
-		MOV DX , 1700H
-		INT 10H
-		PRINT_Messages GAME_INVITATION_SEND_MSG
-
-
-	;;;; CHECK IF REGISTER IS EMPTY ;;;
-	MOV DX,3fdh
-	loop_until_ready_3:
- 	in al,dx
-    test al,00100000b
-    jz loop_until_ready_3 	
-
-	;when we are able send
-    mov dx,3f8h
-    mov al,1
-    out dx,al
-	mov GAME_MASTER,1
-	MOV GAME_SLAVE,0
-	MOV CHAT_MASTER,0
-	MOV CHAT_SLAVE,0
-	JMP CHECK_INVITATION
-;--------------------------------------------------------;
-GO_GAME_INVENT_REC:
-	CMP GAME_MASTER,0
-	JNZ ACCEPT_GAME
-		MOV  ah,02
-		mov dx, 1800h
-		int 10h
-
-		MOV AH,09H
-		MOV AL,' '
-		MOV BH,0
-		MOV BL,02
-		MOV CX ,80
-		INT 10H
-
-		MOV AH,02
-		MOV DX,1800H
-		INT 10H
-        
-        mov ah,9
-        mov dx,offset Second_Player_Name+1
-        int 21h
-
-        mov ah,9
-        mov dx,offset GAME_INVITATION_REC_MSG
-        int 21h
-        jmp CHECK_INVITAT_again
-
-	ACCEPT_GAME:
-		mov dx,3fdh
-        loop_until_ready_5:
-        in al,dx
-        test al,00100000b
-        jz loop_until_ready_5        
-;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
-        mov dx,3f8h
-        mov al,1
-        out dx,al
-        jmp Which_level
-
-
-
-					chatpage:
-							mov ah,0                          
-							mov al,3       
-							int 10h
-							mov ah,2
-                            mov dx,01113h
-                            int 10h
-                            PRINT_Messages levelone
-							mov ah,0
-							int 16h
-							; cmp AH,3BH		;if f1 is pressed, go to chat module
-							; JE CHAT_Module
-							cmp AH,3CH		;if f2 is pressed, start the game
-							JE Which_level
-							Cmp AH,01
-							JE End_Game
-							jmp chatpage
-
-					Which_level:
-                                   mov ah,00
-                                    mov al,02
-                                    int 10h
-                                    mov ah,2
-                                    mov dx,01113h
-                                    int 10h
-                                    PRINT_Messages levelone
-                                     ADD DH,2
-                                    INT 10h
-                                    PRINT_Messages leveltwo
-
-                                    mov ah,0
-                                    int 16h
-									cmp al,'1'
-									JE Level_is_Valid
-									cmp al,'2'
-									jne Which_level
-					Level_is_Valid:
-                                    mov level,al
-									CALL FAR PTR Start_Game
-									jmp First_menu
-
-					End_Game :
-							RET
-Main_menu ENDP
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Start_Game PROC FAR
-
-				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-				call FAR PTR draw_background ;draw the background of the Game window
-				call FAR PTR draw_h1
-				call FAR PTR draw_h2
-				CALL FAR PTR draw_p1
-				CALL FAR PTR draw_p2
-				call FAR PTR DRAW_BARRIER1
-				call FAR PTR DRAW_BARRIER2
-
-			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
-				CHECK_TIME:       
-
-							MOV  AH,2Ch                          	;get the system time
-							INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
-							CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
-							JE   CHECK_TIME                      	;if it is the same, check again
-							;if it's different, then draw, move, etc.
-							MOV  TIME_AUX,DL                         ;update time
-
-							cmp level,49    
-							JZ level1
-							
-							level2:
-							CALL FAR PTR MOVE_BARRIERS_2
-
-							level1:                
-							CALL FAR PTR MOVE_BARRIERS
-							
-
-							;check if health is zero, Game Over
-							mov ax,first_player_health
-							cmp ax,0
-							jz Game_Over
-
-							;check if health is zero, Game Over
-							mov ax,second_player_health
-							cmp ax,0
-							jz Game_Over
-
-							CALL FAR PTR MOVE_PLAYERS
-							
-							;;;;;;;;;;;;;Flushing the keyboard buffer
-							mov ah,0ch
-							mov al,0
-							int 21h												
-					JMP  CHECK_TIME                      	;after everything checks time again		
-
-			;;;;;;;;;;;GAME ENDING FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
-				Game_Over: 
-				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
-				; call FAR PTR draw_background
-				call far PTR Game_over_screen
-					mov ax,second_player_health
-				cmp ax,0
-				jz first_wins
-				mov ax,first_player_health
-				cmp ax,0
-				jz second_wins
-				jmp final
-					first_wins:
-					mov first_player_X,30 
-					mov first_player_y,90
-					call FAR PTR draw_p1
-					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 0eh ;YELLOW
-					MOV CX, 17 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
-					jmp final
-					second_wins:
-					mov second_player_X,30
-					mov second_player_Y,90
-					call FAR PTR draw_p2
-					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 01h ;BLUE
-					MOV CX, 20 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
-
-				final:
-                mov ah,2        
-                mov dx,1100h
-                int 10h                ;Position the Cursor
-				ADD DH,3
-				PRINT_Messages GAME_OVER_mess
-				mov ah,0
-				int 16h
-				cmp AH,01
-				JNE Final
-
-	RET
-Start_Game ENDP
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;taking the character from the user and reacting to it
@@ -2974,5 +2625,812 @@ Temp_End:
                                     RET
 Take_User_Data ENDP
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+Main_menu PROC FAR
+
+				FIRST_MENU:
+					mov ah,00
+					mov al,02
+					int 10h
+
+					mov ah,2
+					mov dx,0a13h
+					int 10h
+					
+					PRINT_Messages CHAT
+					ADD DH,2
+					INT 10h
+					PRINT_Messages Sky_GAME
+					ADD DH,2
+					INT 10h
+					PRINT_Messages END_GAME_mess
+					
+		;;;;;;;;;;;; DRAW LINE  ;;;;;;;;;;;;;
+				mov ah,02
+				mov dx, 1600h
+				int 10h
+
+				MOV AH,09H
+				MOV AL,'-'
+				MOV BH,0
+				MOV BL,02
+				MOV CX ,80
+				INT 10H
+
+			;;;;;;;;;;  CHECK FOR INVITATIONS ;;;;;;;;;;;;;
+			CHECK_INVITATION:
+				mov dx,3fdh
+        		in al,dx
+        		test al,1
+				jz CHECK_INVITAT_again
+				jmp if_receive
+				if_receive:
+					mov dx,03f8h
+					in al,dx
+					cmp AL,0    ;CHECK IF F1 PRESSED CHAT INVENTATION
+					jE FAR PTR GO_CHAT_INVET_REC
+					CMP Al,1   ;CHECK IF F2 PRESSED GAME INVENTATION
+					JE FAR PTR  GO_GAME_INVENT_REC_TEMP
+					;CMP AH,01
+					;JE End_Game
+
+					CHECK_INVITAT_again:
+					mov ah,1
+     			    int 16h
+      				jz CHECK_INVITATION
+
+	;;;;;;;;;;;;;;;;;; SEND INVITAION ;;;;;;;;;;;;;;;;;;
+			MOV AH,0
+			INT 16h
+			CMP AH,3BH  ;f1
+			JE  GO_CHAT_INVET_SEND
+			CMP AH,3CH   ;f2
+			JE 	GO_GAME_INVENT_SEND_TEMP	
+			;CMP AH,01
+			;JE End_Game
+			JMP CHECK_INVITATION
+
+	;;;;;;;;;;;;;;;;;;; IF JUMP TO GO_CHAT_INVET_SEND  ;;;;;;;;;;;;		
+		GO_CHAT_INVET_SEND:
+			;;;;; MOVE THE CURSOR TO THE POSITION IN WHICH SENT INVETATION APPEAR
+			CALL FAR PTR CHAT_INVET_PROC
+		
+			JMP CHECK_INVITATION
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;;;;;;	IF I RECEIVE A CHAT INVITAION ;;;;;;;
+GO_GAME_INVENT_SEND_TEMP:
+JMP GO_GAME_INVENT_SEND
+GO_GAME_INVENT_REC_TEMP:
+JMP GO_GAME_INVENT_REC
+Start_Game_temp:
+jmp Start_Game		
+
+GO_CHAT_INVET_REC:
+
+		cmp CHAT_MASTER,0
+		   jNz ACCEPT
+		   MOV  ah,02
+			mov dx, 1800h
+			int 10h
+
+			MOV AH,09H
+			MOV AL,' '
+			MOV BH,0
+			MOV BL,02
+			MOV CX ,80
+			INT 10H
+
+			MOV AH,02
+			MOV DX,1800H
+			INT 10H
+        
+        
+        PRINT_Messages Second_Player_Name+1
+      
+		ADD DL,2
+    
+        PRINT_Messages CHAT_INVITATION_REC_MEG
+       
+        jmp CHECK_INVITAT_again
+        
+
+        ACCEPT:
+		mov dx,3fdh
+        loop_until_ready_2:
+        in al,dx
+        test al,00100000b
+        jz loop_until_ready_2        
+;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
+        mov dx,3f8h
+        mov al,0
+        out dx,al
+        jmp chatpage			
+;----------------------------------------------------;
+
+
+	GO_GAME_INVENT_SEND:	
+		;;;;;;;; CLEAR THE LINE 23 BEFORE PRINTING THE NEXT INVITATION MSG ;;;;;;;
+		;;; MOVE THE CURSOR TO WRITE
+		cmp GAME_SLAVE,1  ;;slave
+		JE receive_level
+		
+
+		mov ah,02
+		mov dx, 1700h
+		int 10h
+
+		MOV AH,09H
+		MOV AL,' '
+		MOV BH,0
+		MOV BL,02
+		MOV CX ,80
+		INT 10H
+
+		MOV AH,02
+		MOV DX , 1700H
+		INT 10H
+		PRINT_Messages GAME_INVITATION_SEND_MSG
+
+		add dl,2
+
+		PRINT_Messages Second_Player_Name
+
+
+
+
+	;;;; CHECK IF REGISTER IS EMPTY ;;;
+	MOV DX,3fdh
+	loop_until_ready_3:
+ 	in al,dx
+    test al,00100000b
+    jz loop_until_ready_3 	
+
+	;when we are able send
+    mov dx,3f8h
+    mov al,1
+    out dx,al
+	mov GAME_MASTER,1
+	MOV GAME_SLAVE,0
+
+	JMP CHECK_INVITATION
+
+	receive_level:
+		
+		MOV DX,3fdh
+		loop_until_ready_33:
+		in al,dx
+		test al,00100000b
+		jz loop_until_ready_33 	
+
+		;when we are able send
+		mov dx,3f8h
+		mov al,1
+		out dx,al
+
+		call far ptr CLEAR_SCREEN
+		call far ptr draw_background
+		CALL FAR PTR draw_p1
+		CALL FAR PTR draw_p2
+		
+
+		MOV DX,3fdh
+		loop_until_ready_34:
+		in al,dx
+		test al,1
+		jz loop_until_ready_34 	
+
+		;when we are able send
+		mov dx,3f8h
+		in al,dx
+		mov level,al
+		
+		jmp LETS_START_GAME
+
+
+
+	
+;--------------------------------------------------------;
+GO_GAME_INVENT_REC:
+	CMP GAME_MASTER,0
+	JNE ACCEPT_GAME
+		mov game_slave,1
+
+		MOV  ah,02
+		mov dx, 1800h
+		int 10h
+
+		MOV AH,09H
+		MOV AL,' '
+		MOV BH,0
+		MOV BL,02
+		MOV CX ,80
+		INT 10H
+
+		MOV AH,02
+		MOV DX,1800H
+		INT 10H
+        
+        mov ah,9
+        mov dx,offset Second_Player_Name+1
+        int 21h
+
+        mov ah,9
+        mov dx,offset GAME_INVITATION_REC_MSG
+        int 21h
+        jmp CHECK_INVITAT_again
+
+	ACCEPT_GAME:
+
+		JMP Which_level
+		ABCD:
+	
+		send_123:
+		mov dx,3fdh
+        loop_until_ready_5:
+        in al,dx
+        test al,00100000b
+        jz loop_until_ready_5        
+;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
+        mov dx,3f8h
+		mov al,bl
+        out dx,al
+		mov level,bl
+		LETS_START_GAME:
+        
+		CALL FAR PTR Start_Game
+		jmp First_menu
+
+
+
+					chatpage:
+						CALL FAR PTR CHAT_MODULE
+						
+
+					Which_level:
+                                   mov ah,00
+                                    mov al,02
+                                    int 10h
+                                    mov ah,2
+                                    mov dx,01113h
+                                    int 10h
+                                    PRINT_Messages levelone
+                                     ADD DH,2
+                                    INT 10h
+                                    PRINT_Messages leveltwo
+
+                                    mov ah,0
+                                    int 16h
+									cmp al,49
+									mov bl ,al
+									JE ABCD
+									cmp al,50
+									mov bl ,al
+									JE ABCD
+									JMP Which_level
+				
+								
+
+					End_Game :
+							RET
+Main_menu ENDP
+
+chose_which_level proc FAR
+
+RET
+chose_which_level ENDP
+
+CHAT_INVET_PROC PROC FAR
+		mov ah,02
+			mov dx, 1700h
+			int 10h
+			MOV AH,09H
+			MOV AL,' '
+			MOV BH,0
+			MOV BL,02
+			MOV CX ,80
+			INT 10H
+			MOV AH,02
+			MOV DX,1700H
+			INT 10H
+
+			PRINT_Messages CHAT_INVITATION_SEND_MEG
+
+			ADD DL,2
+
+		
+        	PRINT_Messages Second_Player_Name+1
+        	
+
+        	mov dx,3fdh
+
+        	loop_until_ready:
+        	in al,dx
+        	test al,00100000b
+        	jz loop_until_ready        
+        
+;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
+         	mov dx,3f8h
+        	mov al,0   ;0 ->CHAT
+        	out dx,al
+
+			MOV CHAT_MASTER,1  ;;;THE PLAYER HOW SENT THE CHAT INVITAION IS THE 
+			MOV CHAT_SLAVE,0   ;;; GAME MASTER'
+
+RET
+CHAT_INVET_PROC ENDP
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Start_Game PROC FAR
+
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				call FAR PTR draw_background ;draw the background of the Game window
+				call FAR PTR draw_h1
+				call FAR PTR draw_h2
+				CALL FAR PTR draw_p1
+				CALL FAR PTR draw_p2
+				call FAR PTR DRAW_BARRIER1
+				call FAR PTR DRAW_BARRIER2
+
+			;;;;;;;;;;;GAME LOOP FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				CHECK_TIME:       
+
+							MOV  AH,2Ch                          	;get the system time
+							INT  21h                             	;CH = hour CL = minute DH = second DL = 1/100 seconds
+							CMP  DL,TIME_AUX                     	;is the current time equal to the previous one(TIME_AUX)?
+							JE   CHECK_TIME                      	;if it is the same, check again
+							;if it's different, then draw, move, etc.
+							MOV  TIME_AUX,DL                         ;update time
+
+							cmp level,49    
+							JZ level1
+							
+							level2:
+							CALL FAR PTR MOVE_BARRIERS_2
+
+							level1:                
+							CALL FAR PTR MOVE_BARRIERS
+							
+
+							;check if health is zero, Game Over
+							mov ax,first_player_health
+							cmp ax,0
+							jz Game_Over
+
+							;check if health is zero, Game Over
+							mov ax,second_player_health
+							cmp ax,0
+							jz Game_Over
+
+							CALL FAR PTR MOVE_PLAYERS
+							
+							;;;;;;;;;;;;;Flushing the keyboard buffer
+							mov ah,0ch
+							mov al,0
+							int 21h												
+					JMP  CHECK_TIME                      	;after everything checks time again		
+
+			;;;;;;;;;;;GAME ENDING FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				Game_Over: 
+				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
+				; call FAR PTR draw_background
+				call far PTR Game_over_screen
+					mov ax,second_player_health
+				cmp ax,0
+				jz first_wins
+				mov ax,first_player_health
+				cmp ax,0
+				jz second_wins
+				jmp final
+					first_wins:
+					mov first_player_X,30 
+					mov first_player_y,90
+					call FAR PTR draw_p1
+					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 0eh ;YELLOW
+					MOV CX, 17 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+					jmp final
+					second_wins:
+					mov second_player_X,30
+					mov second_player_Y,90
+					call FAR PTR draw_p2
+					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
+					MOV AH, 13H ; WRITE THE STRING
+					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					XOR BH,BH ; VIDEO PAGE = 0
+					MOV BL, 01h ;BLUE
+					MOV CX, 20 ; LENGTH OF THE STRING
+					MOV DH, 12 ;ROW TO PLACE STRING
+					MOV DL, 12 ; COLUMN TO PLACE STRING
+					INT 10H
+
+				final:
+                mov ah,2        
+                mov dx,1100h
+                int 10h                ;Position the Cursor
+				ADD DH,3
+				PRINT_Messages GAME_OVER_mess
+				mov ah,0
+				int 16h
+				cmp AH,01
+				JNE Final
+
+	RET
+Start_Game ENDP
+
+
+
+  CHAT_MODULE PROC FAR
+	;CLEAR screen
+	                    mov  ah,0
+	                    mov  al,3
+	                    int  10h
+
+	                    CALL FAR PTR SET_CHATTERS
+	                    call FAR PTR draw_line
+
+	;set first cursor position to top left center
+	                    MOV  AH,2
+	                    MOV  DL,0
+	                    MOV  DH ,0
+	                    INT  10H
+
+
+
+	;check if any letter recevied
+	CHECK_RECEIVE:      
+	;check if their is letter received
+	                    MOV  DX,Line_status_register         	; LINE STATUS resgister
+	                    IN   AL,DX
+	                    TEST AL,1
+	                    JZ   NO_RECIEVE
+
+	;receive register
+	                    MOV  DX ,TRANSMIT_DATA_REGISTER
+	                    IN   AL ,DX
+	                    MOV  LETTER_RECEIVING,AL
+
+	                    CMP  AL,1BH                          	;scan code of ESC
+	                    JE   END_CHAT
+						   
+	                    CMP  AL,8   
+				 		JZ  IT_IS_BACK_REC                     	;CHECK IF RECIEVED BACKSPACE TO SET THE VARIABLE
+						JMP CHECK_ENTER_REC
+			IT_IS_BACK_REC:
+	                    MOV  IS_BACKSPACE,1
+	                    JMP  GO_TO_LOWER_SCREEN
+
+	CHECK_ENTER_REC:   CMP  AL,13                           	;CHECK IF RECIEVED ENTER
+	                    JZ   ITIS_ENTER
+	                    JMP  GO_TO_LOWER_SCREEN
+	ITIS_ENTER:         
+	                    MOV  IS_ENTER,1
+
+	GO_TO_LOWER_SCREEN: CALL FAR PTR Lower_screen
+	                    JMP  CHECK_RECEIVE
+
+
+	;IF NOTHING TO RECIEVE SEND CHARACTER IF ANY
+	NO_RECIEVE:         
+	                    MOV  AL,0
+	                    MOV  AH,01H
+	                    INT  16H                             	
+
+	                    CMP  AL,0
+	                    JE   CHECK_RECEIVE                   	
+
+	                    MOV  AH,00H                          	
+	                    INT  16H
+	                    MOV  LETTER_SENT,AL                  	;STORE DATA IN LETTER TO BE SENT
+																;LATER
+
+
+	;--------------------- START SENDING -------------------------
+	                    MOV  DX , Line_status_register       	;LINE STATUS REGISTER
+	                    IN   AL , DX                         	;READ LINE STATUS
+	                    TEST AL , 00100000B
+	                    JZ   CHECK_RECEIVE                   	;NOT EMPTY
+						   
+	                    MOV  DX , TRANSMIT_DATA_REGISTER     	; TRANSMIT DATA REGISTER
+	                    MOV  AL,LETTER_SENT
+	                    OUT  DX , AL
+
+	                    CMP  AL,27                           	; check if ESC is pressed
+	                    JE   END_CHAT
+
+	                    CMP  AL,8
+						JZ IT_IS_BACK1
+						JMP check_enter_SEND
+				IT_IS_BACK1:
+	                    MOV  IS_BACKSPACE,1
+	                    JMP  GO_TO_UPPER_SCREEN
+
+	check_enter_SEND:   CMP  AL,13                            ;CHECK scan code if ENTER KEY
+	                    JNZ  GO_TO_UPPER_SCREEN
+	                    MOV  IS_ENTER,1
+
+	GO_TO_UPPER_SCREEN:      CALL FAR PTR upper_screen
+	                    	 JMP  CHECK_RECEIVE
+
+	END_CHAT:           
+	                  
+	                    mov  ah,0
+	                    mov  al,3
+	                    int  10h
+	                    RET
+CHAT_MODULE ENDP
+
+SET_CHATTERS PROC FAR
+	                    mov  ah,2                            	;SET POSITION
+	                    mov  DX,0H
+	                    INT  10H
+
+	                    MOV  AH,09
+	                    MOV  DX,OFFSET First_Player_Name         	;PRINT first_chatter NAME
+	                    INT  21H
+
+	                    mov  ah,2                            	;SET POSITION
+	                    mov  DX,0c00H
+	                    INT  10H
+	                    MOV  AH,09
+	                    MOV  DX,OFFSET Second_Player_Name        	;PRINT SECOND_chatter NAME
+	                    INT  21H
+
+						mov  ah,2                            	;SET POSITION
+	                    mov  DX,1800H
+	                    INT  10H
+	                    MOV  AH,09
+	                    MOV  DX,OFFSET chat_end_string        	;PRINT SECOND_chatter NAME
+	                    INT  21H
+
+	                    RET
+SET_CHATTERS ENDP
+
+	;description
+draw_line PROC FAR
+	                    MOV  AH,2
+	                    mov  dx,12
+	                    INT  10H
+
+	                    mov  ax,0b800h                       	;text mode
+	                    mov  DI,1760                         	; each row 80 column each one 2 bits 80*2*12
+	                    mov  es,ax
+	                    mov  ah,0fh                          	; black background
+	                    mov  al,'-'                          	; '-'
+	                    mov  cx,80
+	                    rep  stosw
+
+						mov  ax,0b800h                       	;text mode
+	                    mov  DI,3680                         	; each row 80 column each one 2 bits 80*2*12
+	                    mov  es,ax
+	                    mov  ah,0fh                          	; black background
+	                    mov  al,'_'                          	; '-'
+	                    mov  cx,80
+	                    rep  stosw
+	                    ret
+draw_line ENDP
+
+upper_screen PROC FAR
+	                    push ax
+	                    push bx
+	                    push cx
+						PUSH DX
+	                    CMP  IS_BACKSPACE,1
+	                    JNZ  NOT_BACK
+	                    CMP  First_cursor_X,start_position_x 
+	                    JG  CAN_BACK
+	                    JMP  SET_BACK
+						
+	CAN_BACK:         
+	                    DEC  First_cursor_X                  ; IF IT IS BACKSPACE DEC POSITION X
+															 ; AND STORE ' ' IN AL
+	SET_BACK:       
+	                    MOV  LETTER_SENT,' '                  	;SPACE
+	                    JMP  set_new_position
+
+
+	NOT_BACK:      
+	                    CMP  IS_ENTER,1
+	                    JE NEW_LINE 
+						JMP set_new_position
+
+
+	NEW_LINE:          
+
+	                    INC  First_cursor_Y                  	;START NEW LINE
+	                    MOV  First_cursor_X,start_position_x 	;SET X TO LINE BEGINNING
+	                    JMP  CHECK_SCROLL            	;SCROLL ONE LINE
+
+
+	set_new_position:   
+	                    MOV  AH,2
+	                    MOV  DL ,First_cursor_X
+	                    MOV  DH ,First_cursor_Y
+	                    INT  10H
+      
+	;	PRINT THE CURRENT CHARACTER WITH CERTAIN COLOR
+	                    MOV  AH,9
+	                    MOV  BH,0
+	                    MOV  AL ,LETTER_SENT      ; STORE SENT LETTER IN AL
+	                    MOV  CX,1H					; PRINT LETTER 1 TIME
+	                    MOV  BL,03H                 ;LIGHT BLUE COLOR	
+	                    INT  10H
+
+	                    CMP  IS_BACKSPACE,1  
+	                    JE   END_UPPER_CHAT
+	                    INC  First_cursor_X
+						
+						;IF FIRST_CURSOR_X REACHES END OF LINE 76 START NEW LINE
+						MOV DL,end_line
+	                    CMP  First_cursor_X ,DL   
+	                    JNZ  END_UPPER_CHAT
+	                    JMP  NEW_LINE
+	CHECK_SCROLL: 
+			CMP  First_cursor_Y,11
+	        JNZ  END_UPPER_CHAT
+			JMP SCROLL_UPPER_SCREEN
+
+	SCROLL_UPPER_SCREEN:
+					CALL FAR PTR SCROLL_UP  
+	                   
+
+	END_UPPER_CHAT:  
+
+	                    MOV  AH,2
+	                    MOV  DL ,First_cursor_X     ; SET NEW X-POSITION OF CURSOR
+	                    MOV  DH ,First_cursor_Y		 ; SET NEW Y-POSITION OF CURSOR
+	                    INT  10H
+
+						MOV  AL,0
+
+	                    MOV  IS_BACKSPACE,0      ;RETURN IS_BACKSPACE,IS_ENTER TO ZERO AGAIN
+	                    MOV  IS_ENTER,0
+	                    
+
+						POP DX
+	                    pop  cx
+	                    pop  bx
+	                    pop  ax
+	                    RET
+upper_screen ENDP
+
+;description
+;description
+SCROLL_UP PROC FAR
+	PUSH ax
+	PUSH bx
+	PUSH cx
+	PUSH DX
+
+   MOV  AH,6
+	MOV  AL,1                            	; SCROLL THE UPPER PART  BY 1 LINE
+	MOV  BH,0                            	; NORMAL VIDEO ATTRIBUTE
+	MOV  CH,1                            	;GET POSITION
+	MOV  CL,03      				 
+	MOV  DH,10
+	MOV  DL,79
+	INT  10H
+	DEC  First_cursor_Y	
+
+	POP dx
+	POP CX
+	POP BX 
+	POP AX
+	RET 
+SCROLL_UP ENDP
+
+Lower_screen PROC
+						PUSH AX
+						PUSH bx
+						PUSH cx
+						PUSH DX
+
+	                    CMP  IS_BACKSPACE,1
+	                    JNZ  NOT_BACK2
+	                    CMP  SECOND_CURSOR_X,start_position_x
+	                    JG  CAN_BACK2
+	                    JMP  SET_BACK2
+
+	            
+	CAN_BACK2:        
+	                    DEC  SECOND_CURSOR_X
+
+	SET_BACK2:      
+	                    MOV  AL,' '                           	;SPACE
+	                    JMP  set_new_position2
+
+						   
+	NOT_BACK2:     
+	                    CMP  IS_ENTER,1
+						JE NEW_LINE2
+	                    JMP  set_new_position2
+
+
+
+	NEW_LINE2:         
+
+	                    INC  SECOND_CURSOR_Y
+	                    MOV  SECOND_CURSOR_X,start_position_x   ;SET CURSOR_X OF LOWER SCREEN 
+	                    JMP  CHECK_SCROLL2			   
+	set_new_position2:  
+
+	                    MOV  AH,2
+	                    MOV  DL ,SECOND_CURSOR_X ; SET CURSOR POSITION OF 2ND CURSOR
+	                    MOV  DH ,SECOND_CURSOR_Y
+	                    INT  10H
+	
+
+	                    MOV  AH,9                ;PRINT THE RECEIVED LETTER WITH RED COLOR
+	                    MOV  BH,0				 
+	                    MOV  CX,1H				; one time
+	                    MOV  BL,0CH				;RED COLOR
+	                    INT  10H
+						
+
+	
+	                    CMP  IS_BACKSPACE,1
+	                    JE   END_LOWER_CHAT
+	                    INC  SECOND_CURSOR_X    ; inc X_position of 2nd cursor if it is not backspace
+						   
+						mov dl,end_line
+	                    CMP  SECOND_CURSOR_X ,dl ; if X_position of 2nd cursor reach end of line 
+	                    JNE  END_LOWER_CHAT		 
+	                    JMP  NEW_LINE2			; start new line	
+	CHECK_SCROLL2:
+	  				CMP  SECOND_CURSOR_Y,23
+	                JNE  END_LOWER_CHAT
+					JMP  SCROLL_BOTTOM
+	SCROLL_BOTTOM:      
+	                CALL FAR PTR SCROLL_DOWN
+	                    
+
+	END_LOWER_CHAT: 
+
+	                    MOV  AH,2
+	                    MOV  DL ,First_cursor_X	 ;SET NEW CURSOR POSITION X
+	                    MOV  DH ,First_cursor_Y  ;SET NEW CURSOR POSITION Y
+	                    INT  10H
+						   
+	;CLEAR FLAGS
+	                    MOV  IS_ENTER,0
+	                    MOV  IS_BACKSPACE,0
+	                    MOV  AL,0
+
+						POP dx
+						POP CX
+						POP bx
+						POP ax
+
+	                    RET
+Lower_screen ENDP
+ 
+;description
+SCROLL_dOWN PROC FAR
+		PUSH ax
+		PUSH bx
+		PUSH cx
+		PUSH DX
+
+	    MOV  AH,6
+	    MOV  AL,1
+	    MOV  BH,0
+	    MOV  CH,13
+	    MOV  CL,0
+	    MOV  DH,22
+	    MOV  DL,79
+	    INT  10H
+	    DEC  SECOND_CURSOR_Y
+
+		POP dx
+		POP CX
+		POP BX 
+		POP AX
+	RET 
+SCROLL_dOWN ENDP
 END MAIN

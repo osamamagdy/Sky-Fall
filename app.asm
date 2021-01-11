@@ -479,8 +479,9 @@ MOVE_PLAYERS PROC FAR
                                    ;TO KNOW THAT I AM THE MASTER OR THE SLAVE
 	                                mov DL,GAME_MASTER
 	                                CMP DL, 0
-	                                jz  I_AM_NOT_MASTER
-                                	
+									jnz I_AM_NOT_MASTER_reverse_label
+	                                jmp  I_AM_NOT_MASTER
+                                	I_AM_NOT_MASTER_reverse_label:
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MASTER;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -499,9 +500,14 @@ MOVE_PLAYERS PROC FAR
 									 cmp AH,39h   ;this is space key(ATTACK BUTTON)
 									 jne First_moved_1
 									 cmp first_player_freeze,0
-									 jg End_Moving					;if it is still freezed
+									 JLE Do_not_End_Moving_1					;if it is still freezed
+									 
+									 jmp End_Moving
+									 Do_not_End_Moving_1:
 									 cmp First_Is_Collided,1                ;If he is colliding, he cannot attack
-                                     JE End_Moving
+                                     JNE Do_not_End_Moving_2
+									 Jmp End_Moving
+									 Do_not_End_Moving_2:
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
@@ -513,7 +519,9 @@ MOVE_PLAYERS PROC FAR
 
 									First_moved_1:
 									cmp first_player_freeze,0
-									jg End_Moving					;if it is still freezed
+									JLE Do_not_End_Moving_3
+									jmp End_Moving					;if it is still freezed
+									Do_not_End_Moving_3:
 									MOV STORED_KEY_OR_UART,AH
 									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
 									jmp End_Moving
@@ -526,9 +534,13 @@ CHECK_MOVEMENT_MASTER_UART:
 									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
 									 jne Second_MOVED_1
 									 cmp second_player_freeze,0
-									 jg End_Moving					;if it is still freezed
+									 JLE Do_not_End_Moving_4
+									 jmp End_Moving					;if it is still freezed
+									Do_not_End_Moving_4:
 									 cmp Second_Is_Collided,1                ;If he is colliding, he cannot attack
-                                     JE End_Moving
+									 JNE Do_not_End_Moving_5
+                                     Jmp End_Moving
+									Do_not_End_Moving_5:
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
@@ -539,7 +551,9 @@ CHECK_MOVEMENT_MASTER_UART:
 
 									Second_MOVED_1:
 									 cmp second_player_freeze,0
-									 jg End_Moving					;if it is still freezed
+									 JLE Do_not_End_Moving_6
+									 jmp End_Moving					;if it is still freezed
+									Do_not_End_Moving_6:
 									 MOV STORED_KEY_OR_UART,AL
 								    call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
 									 jmp End_Moving
@@ -3658,7 +3672,9 @@ start_in_game_chatting_again:
 		read_keyboard_ingame:
 		mov ah,1
 		int 16h
-		jz recevive_vale_from_another_player  ;; if no key pressed then see incoming chars
+		jnz Do_not_recevive_vale_from_another_player_label
+		jmp recevive_vale_from_another_player  ;; if no key pressed then see incoming chars
+		Do_not_recevive_vale_from_another_player_label:
 		mov ah,0 
 		int 16h 
 		mov in_game_to_send_val,al

@@ -20,8 +20,44 @@ PRINT_Messages MACRO MSG
                         pop DX
                         POP AX
 ENDM
+;;;;Macro to send a 8 bit word using uart
+SendChar MACRO MyChar
+    LOCAL Send
+    Send:
+       mov         dx, 3fdh
 
+		in          al, dx
+		test        al, 00100000b
+		jz          Send 
+		mov         dx, 3f8h ;sending value
+		mov         al, MyChar
+		out         dx, al
+ENDM 
+;;;;Macro to recieve a 8 bit word using uart
+ReceiveChar MACRO
+    LOCAL Return
+	RETURN:
+    MOV AL, 0
+     mov         dx , 3FDH              	; Line Status Register
+	in          al , dx
+	test        al , 1
+	JZ          RETURN
+	mov         dx , 03F8H
+	in          al , dx
 
+ENDM 
+;;;;Macro to recieve a 8 bit word using uart
+ReceiveCharNotAmustToRecieve MACRO
+    LOCAL Return
+    MOV AL, 0
+     mov         dx , 3FDH              	; Line Status Register
+	in          al , dx
+	test        al , 1
+	JZ          RETURN
+	mov         dx , 03F8H
+	in          al , dx
+	RETURN:
+ENDM
 .model HUGE
 
 .stack 64h
@@ -190,7 +226,7 @@ ENDM
  						DB 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 16, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186, 186 
 
     ;MAIN MENU
-	GAME_MASTER DB 0
+	GAME_MASTER DB 00H
 	GAME_SLAVE DB 0
 	CHAT_MASTER DB 0
 	CHAT_SLAVE DB 0
@@ -382,6 +418,12 @@ Goodbye_mess db 'Goodbye *^-^* $'
 	chat_end_string        db  'To end chat press ESC $'
 
 level DB 0
+;------------------------------------------------------------
+;;FOR MAKING GAME BEING PLAYED BY TWO PCS
+LETTER_RECEIVED      DB  ?;LETTER RECIEVED BY UART
+is_master DB 01h ;WHEN A PLAYER SENT INVI. TO THE ANOTHER ONE SO HE IS THE MASTER (MASTER VALUE=1)
+STORED_KEY_OR_UART DB ?;LETTER RECIEVED BY UART OR KEY OF KEYBOARD(OPTIONS OF CONTROLLING THE PLAYERS)
+;---------------------------------------------------------------------------
 .code
 MAIN PROC FAR
 	                                mov  ax,@data
@@ -402,6 +444,9 @@ MAIN ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 ;taking the character from the user and reacting to it
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+;taking the character from the user and reacting to it
+;taking the character from the user and reacting to it
 MOVE_PLAYERS PROC FAR
 
 ;Check if any player is freezed--> then reduce its freezing time
@@ -417,18 +462,28 @@ MOVE_PLAYERS PROC FAR
 
 
 	Check_Pressed:
-	;check if any key is being pressed
+                                   ;TO KNOW THAT I AM THE MASTER OR THE SLAVE
+	                                mov DL,GAME_MASTER
+	                                CMP DL, 0
+	                                jz  I_AM_NOT_MASTER
+                                	
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MASTER;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	                          ;check if any key is being pressed
 	                                 MOV  AH,01h
 	                                 INT  16h
-	                                 JnZ  CHECK_MOVEMENT     	;ZF = 1, JZ -> Jump If Zero
-									 jmp End_Moving
-	CHECK_MOVEMENT:     
+	                                 JnZ  CHECK_MOVEMENT_MASTER_KEYBOARD	     	;ZF = 1, JZ -> Jump If Zero
+									 jmp CHECK_MOVEMENT_MASTER_UART
+
+							      
+	CHECK_MOVEMENT_MASTER_KEYBOARD:     
 	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
 	                                 INT  16h
-
-									 cmp AH,39h   ;this is space key
-									 jne Second_Attacked
+						            SendChar AH 
+									 cmp AH,39h   ;this is space key(ATTACK BUTTON)
+									 jne First_moved_1
 									 cmp first_player_freeze,0
 									 jg End_Moving					;if it is still freezed
 									 cmp First_Is_Collided,1                ;If he is colliding, he cannot attack
@@ -436,9 +491,20 @@ MOVE_PLAYERS PROC FAR
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
-									 Second_Attacked:
-									 cmp AH,1Ch  ;this is Enter
-									 jne first_moved
+									First_moved_1:
+									cmp first_player_freeze,0
+									jg End_Moving					;if it is still freezed
+									MOV STORED_KEY_OR_UART,AH
+									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
+									jmp End_Moving
+
+CHECK_MOVEMENT_MASTER_UART:
+                            ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+	                                ReceiveCharNotAmustToRecieve
+							        MOV LETTER_RECEIVED,AL
+                                ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
+									 jne Second_MOVED_1
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
 									 cmp Second_Is_Collided,1                ;If he is colliding, he cannot attack
@@ -446,18 +512,66 @@ MOVE_PLAYERS PROC FAR
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
-									 First_moved:
-									cmp AH , 40h ;check if it is the second player( Scan Code in AH, if greater than 40h --> it must be second player)
-									JG Second_MOVED
-									 cmp first_player_freeze,0
-									 jg End_Moving					;if it is still freezed
-									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
-									 jmp End_Moving
-
-									Second_MOVED:
+				
+									Second_MOVED_1:
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
+									 MOV STORED_KEY_OR_UART,AL
+								    call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
+									 jmp End_Moving
+
+
+;/////////////////////////////////////////////////////////////////////////////////////////////////////SLAVE/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+   I_AM_NOT_MASTER:
+  
+									 MOV  AH,01h
+	                                 INT  16h
+	                                 JnZ  CHECK_MOVEMENT_SLAVE_KEYBOARD	     	;ZF = 1, JZ -> Jump If Zero
+									 JZ CHECK_MOVEMENT_SLAVE_UART
+
+
+		CHECK_MOVEMENT_SLAVE_KEYBOARD:							 
+	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
+	                                 MOV  AH,00h
+	                                 INT  16h
+						            SendChar AH 
+									 cmp AH,1Ch   ;this is ENTER key (ATTACK BUTTON)
+									 jne SECOND_moved_2
+									 cmp SECOND_player_freeze,0
+									 jg End_Moving					;if it is still freezed
+									 cmp SECOND_Is_Collided,1                ;If he is colliding, he cannot attack
+                                     JE End_Moving
+									 call FAR PTR SECOND_Player_Attack
+									 jmp End_Moving
+
+									SECOND_moved_2:
+									cmp first_player_freeze,0
+									jg End_Moving					;if it is still freezed
+									MOV STORED_KEY_OR_UART,AH
 									call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
+									jmp End_Moving
+
+CHECK_MOVEMENT_SLAVE_UART:
+                                    ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+                                    ReceiveCharNotAmustToRecieve
+							        MOV LETTER_RECEIVED,AL
+									;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
+	                                 cmp LETTER_RECEIVED,39h  ;this is SPACE (ATTACK BUTTON)
+									 jne FIRST_MOVED_2
+									 cmp FIRST_player_freeze,0
+									 jg End_Moving					;if it is still freezed
+									 cmp FIRST_Is_Collided,1                ;If he is colliding, he cannot attack
+                                     JE End_Moving
+									 call FAR PTR FIRST_Player_Attack
+									 jmp End_Moving
+
+				
+									FIRST_MOVED_2:
+									 cmp second_player_freeze,0
+									 jg End_Moving					;if it is still freezed
+									 MOV STORED_KEY_OR_UART,AL
+									call FAR PTR CHECK_FIRST_PLAYER_MOVEMENT
+									;call FAR PTR CHECK_SECOND_PLAYER_MOVEMENT
 									 jmp End_Moving
 
 			End_Moving:
@@ -853,7 +967,6 @@ DRAW_BARRIER2 ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ;checking that this move is allowed 
 CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 ;STORE THE PREVIOUS POSITION OF PLAYER 1, we will use it if the new position causes collision (the same as push it in the stack)
@@ -862,29 +975,23 @@ CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 	                                 mov  BX,first_player_Y
 	                                 MOV  PRE_POSITION_Y,BX
 	;if it is 'w' or 'W' move up
-	                                 CMP  AL,77h                          	;'w'
+	                                 CMP  STORED_KEY_OR_UART,11H                    	
 	                                 JE   MOVE_FIRST_PLAYER_UP
-	                                 CMP  AL,57h                          	;'W'
-	                                 JE   MOVE_FIRST_PLAYER_UP
+	                            
 		
 	;if it is 's' or 'S' move down
-	                                 CMP  AL,73h                          	;'s'
+	                                 CMP  STORED_KEY_OR_UART,1FH                    	
 	                                 JE   MOVE_FIRST_PLAYER_DOWN
-	                                 CMP  AL,53h                          	;'S'
-	                                 JE   MOVE_FIRST_PLAYER_DOWN
-		
 		
 	;if it is 'D' or 'd' move first player right
-	                                 cmp  AL,44h
+	                                 cmp  STORED_KEY_OR_UART,20H
 	                                 je   MOVE_FIRST_PLAYER_right
-	                                 cmp  al,64h
-	                                 je   MOVE_FIRST_PLAYER_right
+	                               
 
 	; if it is 'A' or 'a' move first player left
-	                                 cmp  AL,41h
+	                                 cmp  STORED_KEY_OR_UART,1EH
 	                                 je   MOVE_FIRST_PLAYER_LEFT
-	                                 cmp  al,61h
-	                                 je   MOVE_FIRST_PLAYER_LEFT
+	                                
 									 JMP Exit_FIRST_PLAYER_MOVEMENT           	
 	MOVE_FIRST_PLAYER_UP:            
 	                                 MOV  AX,PLAYERS_VELOCITY
@@ -971,8 +1078,10 @@ CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 CHECK_FIRST_PLAYER_MOVEMENT ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;checking that this move is allowed 
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;checking that this move is allowed 
 CHECK_SECOND_PLAYER_MOVEMENT PROC  FAR
 	                                 mov  DX,second_player_X
@@ -982,13 +1091,14 @@ CHECK_SECOND_PLAYER_MOVEMENT PROC  FAR
 
 	;if it is 'o' or 'O' move up
 	                                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IN   AX, 60H
-	                                 CMP  AH, 48H
+								
+	                                 CMP  STORED_KEY_OR_UART, 48H  ;(UP_ARROW)
 	                                 JE   MOVE_SECOND_PLAYER_UP
-	                                 CMP  AH, 50H
+	                                 CMP  STORED_KEY_OR_UART, 50H ;(DOWN_ARROW)
 	                                 JE   MOVE_SECOND_PLAYER_DOWN
-	                                 CMP  AH, 4BH
+	                                 CMP  STORED_KEY_OR_UART, 4BH ;(LEST_ARROW)
 	                                 JE   MOVE_SECOND_PLAYER_left
-	                                 CMP  AH, 4DH
+	                                 CMP  STORED_KEY_OR_UART, 4DH;(RIGHT_ARROW)
 	                                 JE   MOVE_SECOND_PLAYER_right
 
 	                                 JMP  EXIT_PLAYERS_MOVEMENT
@@ -1663,7 +1773,9 @@ Draw_RED_LASER_LEFT_TO_RIGHT PROC FAR
 		mov cx,0ffffh
 		wait1: 
 			
-		LOOP wait1
+		DEC CX
+		CMP CX,0
+		JNE wait1
 
 		mov cx,Red_Laser_Start_X
 		mov dx,first_player_Y
@@ -1741,7 +1853,9 @@ Draw_RED_LASER_RIGHT_TO_LEFT PROC
 		mov cx,0ffffh
 		wait2: 
 			
-		LOOP wait2
+		DEC CX
+		CMP CX,0
+		JNE wait2
 
 
 		mov cx,Red_Laser_Start_X
@@ -1820,9 +1934,11 @@ Draw_BLUE_LASER_LEFT_TO_RIGHT PROC
 		END_Draw_Blue_Laser_1:
 
 		mov cx,0ffffh
-		Wait_3: 
+			wait3: 
 			
-		LOOP Wait_3
+		DEC CX
+		CMP CX,0
+		JNE wait3
 
 
 		mov cx,Blue_Laser_Start_X
@@ -1901,9 +2017,11 @@ Draw_BLUE_LASER_RIGHT_TO_LEFT PROC
 
 	End_Draw_Blue_Laser_2:
 	mov cx,0ffffh
-	Wait_4: 
-		
-	LOOP Wait_4
+		wait4: 
+			
+		DEC CX
+		CMP CX,0
+		JNE wait4
 
 		mov cx,Blue_Laser_Start_X
 		mov dx,Second_player_Y
@@ -2659,19 +2777,23 @@ Main_menu PROC FAR
 				MOV CX ,80
 				INT 10H
 
-			;;;;;;;;;;  CHECK FOR INVITATIONS ;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  CHECK FOR INVITATIONS ;;;;;;;;;;;;;
 			CHECK_INVITATION:
-				mov dx,3fdh
+				mov dx,3fdh  
         		in al,dx
         		test al,1
 				jz CHECK_INVITAT_again
 				jmp if_receive
+				; CHECK_INVITAT_again:
+				; 	mov ah,1
+     			;     int 16h
+      			; 	jz CHECK_INVITATION
 				if_receive:
 					mov dx,03f8h
 					in al,dx
-					cmp AL,0    ;CHECK IF F1 PRESSED CHAT INVENTATION
+					cmp AL,3BH    ;CHECK IF F1 PRESSED CHAT INVENTATION
 					jE FAR PTR GO_CHAT_INVET_REC
-					CMP Al,1   ;CHECK IF F2 PRESSED GAME INVENTATION
+					CMP Al,3CH   ;CHECK IF F2 PRESSED GAME INVENTATION
 					JE FAR PTR  GO_GAME_INVENT_REC_TEMP
 					;CMP AH,01
 					;JE End_Game
@@ -2709,10 +2831,10 @@ jmp Start_Game
 
 GO_CHAT_INVET_REC:
 
-		cmp CHAT_MASTER,0
-		   jNz ACCEPT
-		   MOV  ah,02
-			mov dx, 1800h
+		cmp CHAT_MASTER,1
+		   jE ACCEPT
+		   MOV  ah,02  ;;SLAVE
+		   mov dx, 1800h
 			int 10h
 
 			MOV AH,09H
@@ -2732,7 +2854,8 @@ GO_CHAT_INVET_REC:
 		ADD DL,2
     
         PRINT_Messages CHAT_INVITATION_REC_MEG
-       
+       MOV CHAT_SLAVE,1
+	   MOV GAME_SLAVE,0
         jmp CHECK_INVITAT_again
         
 
@@ -2744,16 +2867,16 @@ GO_CHAT_INVET_REC:
         jz loop_until_ready_2        
 ;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
         mov dx,3f8h
-        mov al,0
+        mov al,3BH
         out dx,al
         jmp chatpage			
 ;----------------------------------------------------;
 
 
-	GO_GAME_INVENT_SEND:	
+GO_GAME_INVENT_SEND:	
 		;;;;;;;; CLEAR THE LINE 23 BEFORE PRINTING THE NEXT INVITATION MSG ;;;;;;;
 		;;; MOVE THE CURSOR TO WRITE
-		cmp GAME_SLAVE,1  ;;slave
+		cmp GAME_SLAVE,1  ;
 		JE receive_level
 		
 
@@ -2789,10 +2912,10 @@ GO_CHAT_INVET_REC:
 
 	;when we are able send
     mov dx,3f8h
-    mov al,1
+    mov al,3CH  ;F2 ->GAME
     out dx,al
 	mov GAME_MASTER,1
-	MOV GAME_SLAVE,0
+	MOV CHAT_MASTER,0
 
 	JMP CHECK_INVITATION
 
@@ -2806,7 +2929,7 @@ GO_CHAT_INVET_REC:
 
 		;when we are able send
 		mov dx,3f8h
-		mov al,1
+		mov al,3CH
 		out dx,al
 
 		call far ptr CLEAR_SCREEN
@@ -2833,9 +2956,10 @@ GO_CHAT_INVET_REC:
 	
 ;--------------------------------------------------------;
 GO_GAME_INVENT_REC:
-	CMP GAME_MASTER,0
-	JNE ACCEPT_GAME
+	CMP GAME_MASTER,1
+	JE ACCEPT_GAME
 		mov game_slave,1
+		MOV CHAT_SLAVE,0
 
 		MOV  ah,02
 		mov dx, 1800h
@@ -2862,11 +2986,18 @@ GO_GAME_INVENT_REC:
         jmp CHECK_INVITAT_again
 
 	ACCEPT_GAME:
+; 		mov dx,3fdh
+;         loop_until_ready_25:
+;         in al,dx
+;         test al,00100000b
+;         jz loop_until_ready_25        
+; ;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
+;         mov dx,3f8h
+; 		mov al,3CH
+;         out dx,al
 
 		JMP Which_level
 		ABCD:
-	
-		send_123:
 		mov dx,3fdh
         loop_until_ready_5:
         in al,dx
@@ -2922,7 +3053,7 @@ RET
 chose_which_level ENDP
 
 CHAT_INVET_PROC PROC FAR
-		mov ah,02
+			mov ah,02
 			mov dx, 1700h
 			int 10h
 			MOV AH,09H
@@ -2931,6 +3062,7 @@ CHAT_INVET_PROC PROC FAR
 			MOV BL,02
 			MOV CX ,80
 			INT 10H
+
 			MOV AH,02
 			MOV DX,1700H
 			INT 10H
@@ -2952,11 +3084,10 @@ CHAT_INVET_PROC PROC FAR
         
 ;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
          	mov dx,3f8h
-        	mov al,0   ;0 ->CHAT
+        	mov al,3BH   ;F1 ->CHAT
         	out dx,al
-
+			mov GAME_MASTER,0
 			MOV CHAT_MASTER,1  ;;;THE PLAYER HOW SENT THE CHAT INVITAION IS THE 
-			MOV CHAT_SLAVE,0   ;;; GAME MASTER'
 
 RET
 CHAT_INVET_PROC ENDP

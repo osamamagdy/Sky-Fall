@@ -504,7 +504,6 @@ MOVE_PLAYERS PROC FAR
 									cmp ah,27h ;press ';' to start ni game chat
 									jne cont1
 									call far ptr start_in_game_chatting
-									jmp End_Moving
 									cont1:
 
 									 cmp AH,39h   ;this is space key(ATTACK BUTTON)
@@ -544,7 +543,6 @@ CHECK_MOVEMENT_MASTER_UART:
 									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
 									jne cont2
 									call far ptr start_in_game_chatting
-									jmp End_Moving
 									cont2:
                                 ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
@@ -585,7 +583,6 @@ CHECK_MOVEMENT_MASTER_UART:
 									cmp ah,27h  ;press ';' to start ni game chat
 									jne cont3
 									call far ptr start_in_game_chatting	
-									jmp End_Moving
 									cont3:				 
 	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
@@ -618,7 +615,6 @@ CHECK_MOVEMENT_SLAVE_UART:
 									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
 									jne cont4
 									call far ptr start_in_game_chatting
-									jmp End_Moving
 									cont4:
 									;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 	                                 cmp LETTER_RECEIVED,39h  ;this is SPACE (ATTACK BUTTON)
@@ -649,6 +645,7 @@ MOVE_PLAYERS ENDP
 ;this will check for direction of the attack
 
 First_Player_Attack PROC 
+
 	mov ax,first_player_X
 	cmp ax,second_player_X
 	jGE Second_IS_IN_THE_LEFT_SIDE
@@ -3921,7 +3918,7 @@ start_in_game_chatting_again:
 	;if recevived print character 
 	;if enter rceived erase backwards ;if x=79  erase all and print name again
 
-
+mov ah,0
 
 RET
 start_in_game_chatting ENDP

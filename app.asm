@@ -2871,8 +2871,8 @@ Main_menu PROC FAR
 					jE FAR PTR GO_CHAT_INVET_REC
 					CMP Al,3CH   ;CHECK IF F2 PRESSED GAME INVENTATION
 					JE FAR PTR  GO_GAME_INVENT_REC_TEMP
-					;CMP AH,01
-					;JE End_Game
+					CMP AL,01  
+					JE END_MAIN_MENU_REC_TEMP
 
 					CHECK_INVITAT_again:
 					mov ah,1
@@ -2886,8 +2886,8 @@ Main_menu PROC FAR
 			JE  GO_CHAT_INVET_SEND
 			CMP AH,3CH   ;f2
 			JE 	GO_GAME_INVENT_SEND_TEMP	
-			;CMP AH,01
-			;JE End_Game
+		    CMP AH,01
+			JE END_MAIN_MENU_SEND_TEMP
 			JMP CHECK_INVITATION
 
 	;;;;;;;;;;;;;;;;;;; IF JUMP TO GO_CHAT_INVET_SEND  ;;;;;;;;;;;;		
@@ -2915,8 +2915,16 @@ GO_GAME_INVENT_SEND_TEMP:
 JMP GO_GAME_INVENT_SEND
 GO_GAME_INVENT_REC_TEMP:
 JMP GO_GAME_INVENT_REC
+
+
 Start_Game_temp:
 jmp Start_Game		
+
+END_MAIN_MENU_SEND_TEMP:
+JMP END_MAIN_MENU_SEND
+
+END_MAIN_MENU_REC_TEMP:
+JMP END_MAIN_MENU_REC
 
 GO_CHAT_INVET_REC:
 
@@ -3101,8 +3109,21 @@ GO_GAME_INVENT_REC:
         
 		CALL FAR PTR Start_Game
 		jmp First_menu
+;;-----------------------------------------------------------------------
+END_MAIN_MENU_SEND:
+		mov dx,3fdh
 
+        	loop_until_ready_66:
+        	in al,dx
+        	test al,00100000b
+        	jz loop_until_ready_66        
+         	mov dx,3f8h
+        	mov al,01H   ;F1 ->CHAT
+        	out dx,al
+			JMP END_GAME
 
+END_MAIN_MENU_REC:
+	JMP END_GAME
 
 					chatpage:
 						CALL FAR PTR CHAT_MODULE

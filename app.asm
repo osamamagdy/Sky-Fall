@@ -556,7 +556,7 @@ CHECK_MOVEMENT_MASTER_UART:
 									jmp End_Moving
 									cont2:
                                 ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
+									 cmp LETTER_RECEIVED,39h  ;this is Enter (ATTACK BUTTON)
 									 jne Second_MOVED_1
 									 cmp second_player_freeze,0
 									 JLE Do_not_End_Moving_4
@@ -602,7 +602,7 @@ CHECK_MOVEMENT_MASTER_UART:
 									jmp End_Moving
 									cont3:				 
 									
-									 cmp AH,1Ch   ;this is ENTER key (ATTACK BUTTON)
+									 cmp AH,39h   ;this is ENTER key (ATTACK BUTTON)
 									 jne SECOND_moved_2
 									 cmp SECOND_player_freeze,0
 									 jg End_Moving					;if it is still freezed
@@ -1054,21 +1054,21 @@ CHECK_FIRST_PLAYER_MOVEMENT PROC FAR
 	                                 mov  BX,first_player_Y
 	                                 MOV  PRE_POSITION_Y,BX
 	;if it is 'w' or 'W' move up
-	                                 CMP  STORED_KEY_OR_UART,11H                    	
+	                                 CMP  STORED_KEY_OR_UART, 48H                     	
 	                                 JE   MOVE_FIRST_PLAYER_UP
 	                            
 		
 	;if it is 's' or 'S' move down
-	                                 CMP  STORED_KEY_OR_UART,1FH                    	
+	                                 CMP  STORED_KEY_OR_UART,50H                    	
 	                                 JE   MOVE_FIRST_PLAYER_DOWN
 		
 	;if it is 'D' or 'd' move first player right
-	                                 cmp  STORED_KEY_OR_UART,20H
+	                                 cmp  STORED_KEY_OR_UART,4DH
 	                                 je   MOVE_FIRST_PLAYER_right
 	                               
 
 	; if it is 'A' or 'a' move first player left
-	                                 cmp  STORED_KEY_OR_UART,1EH
+	                                 cmp  STORED_KEY_OR_UART,4BH
 	                                 je   MOVE_FIRST_PLAYER_LEFT
 	                                
 									 JMP Exit_FIRST_PLAYER_MOVEMENT           	

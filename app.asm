@@ -237,7 +237,14 @@ ENDM
 	GAME_INVITATION_REC_MSG DB ' sent A GAME INVITATION TO YOU  $'
 	CHAT_INVITATION_SEND_MEG DB 'YOU SENT A CHAT INVITATION TO $' 
 	CHAT_INVITATION_REC_MEG  DB ' sent A CHAT INVITATION TO YOU  $'
-	play_against_meg       db "you are playing against $"
+play_against_meg DB '  ', 0ah,0dh      
+  DB   '         ============================================',0ah,0dh
+  DB   '         ||                                         ||',0ah,0dh                                        
+  DB   '         ||   * YOU PLAY AGAINST                    ||',0ah,0dh
+  DB   '         ||                                         ||',0ah,0dh
+  DB   '         ============================================',0ah,0dh
+  DB   '$',0ah,0dh
+
 	WAITING_MESSAGE DB 'PLEASE WAIT FOR OTHER PLAYER RESPONSE $'
     CHAT DB '*To Start Chatting Press F1 $'
     Sky_GAME DB '*To Start Sky Fall Game Press F2 $'
@@ -2780,15 +2787,17 @@ Greater_than_90:
 
 ;;;;;;;SET CURSOR POSITION AND PRINT PLAY_AGAINST MESSAGE        
         mov ah,2        
-        mov dx,0a04h
+        mov dx,0a0ah
         int 10h  
 
         mov ah,9
         mov dx,offset play_against_meg 
         int 21h
+
+		add dl,2
 ;;;;;;;SET CURSOR POSITION AND PRINT PLAYER NAME MESSAGE 
         mov ah,2        
-        mov dx,0a1Ch
+        mov dx,0d23h
         int 10h
 
         mov ah,9
@@ -2812,6 +2821,10 @@ Take_User_Data ENDP
 Main_menu PROC FAR
 
 				FIRST_MENU:
+					mov CHAT_MASTER,0
+					mov GAME_MASTER,0
+					MOV CHAT_SLAVE,0
+					MOV CHAT_SLAVE,0
 					mov ah,00
 					mov al,02
 					int 10h
@@ -2880,9 +2893,22 @@ Main_menu PROC FAR
 	;;;;;;;;;;;;;;;;;;; IF JUMP TO GO_CHAT_INVET_SEND  ;;;;;;;;;;;;		
 		GO_CHAT_INVET_SEND:
 			;;;;; MOVE THE CURSOR TO THE POSITION IN WHICH SENT INVETATION APPEAR
-			CALL FAR PTR CHAT_INVET_PROC
-		
+				CMP CHAT_SLAVE,1
+			JE RECIEVE_CHAT
+			CALL FAR PTR CHAT_INVET_M_PROC
 			JMP CHECK_INVITATION
+			RECIEVE_CHAT:
+			MOV DX,3fdh
+			loop_until_ready_37:
+			in al,dx
+			test al,00100000b
+			jz loop_until_ready_37 	
+
+			;when we are able send
+			mov dx,3f8h
+			mov al,3BH
+			out dx,al
+			JMP chatpage
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		;;;;;;;	IF I RECEIVE A CHAT INVITAION ;;;;;;;
 GO_GAME_INVENT_SEND_TEMP:
@@ -2923,15 +2949,15 @@ GO_CHAT_INVET_REC:
         
 
         ACCEPT:
-		mov dx,3fdh
-        loop_until_ready_2:
-        in al,dx
-        test al,00100000b
-        jz loop_until_ready_2        
-;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
-        mov dx,3f8h
-        mov al,3BH
-        out dx,al
+; 		mov dx,3fdh
+;         loop_until_ready_2:
+;         in al,dx
+;         test al,00100000b
+;         jz loop_until_ready_2        
+; ;;;;;;;;;;; now we can send  ;;;;;;;;;;;;;;;;;;
+;         mov dx,3f8h
+;         mov al,3BH
+;         out dx,al
         jmp chatpage			
 ;----------------------------------------------------;
 
@@ -3080,6 +3106,7 @@ GO_GAME_INVENT_REC:
 
 					chatpage:
 						CALL FAR PTR CHAT_MODULE
+						jmp FIRST_MENU
 						
 
 					Which_level:
@@ -3115,7 +3142,7 @@ chose_which_level proc FAR
 RET
 chose_which_level ENDP
 
-CHAT_INVET_PROC PROC FAR
+CHAT_INVET_M_PROC PROC FAR
 			mov ah,02
 			mov dx, 1700h
 			int 10h
@@ -3153,7 +3180,7 @@ CHAT_INVET_PROC PROC FAR
 			MOV CHAT_MASTER,1  ;;;THE PLAYER HOW SENT THE CHAT INVITAION IS THE 
 
 RET
-CHAT_INVET_PROC ENDP
+CHAT_INVET_M_PROC ENDP
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Start_Game PROC FAR
 

@@ -505,6 +505,12 @@ MOVE_PLAYERS PROC FAR
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
+									;in game chat
+									cmp al,';'  ;press ';' to start ni game chat
+									jne First_moved_1
+									call far ptr start_in_game_chatting
+
+
 									First_moved_1:
 									cmp first_player_freeze,0
 									jg End_Moving					;if it is still freezed
@@ -526,7 +532,11 @@ CHECK_MOVEMENT_MASTER_UART:
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
-				
+									;in game chat
+									cmp al,';'  ;press ';' to start ni game chat
+									jne Second_MOVED_1
+									call far ptr start_in_game_chatting
+
 									Second_MOVED_1:
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
@@ -3679,7 +3689,8 @@ start_in_game_chatting_again:
 		;; clear_line_in_game_chat as the cursor has reached its end so we erase from the end of the postion of the player name to position 79
 			 mov di, offset First_Player_Name
 			 inc di  
-			 mov in_game_iterator ,[di]    ; save in the iterator the size of the player name to begin after it
+			mov cl,[di]
+		 mov in_game_iterator ,cl   ; save in the iterator the size of the player name to begin after it
 			 inc in_game_iterator
 
 
@@ -3739,8 +3750,8 @@ start_in_game_chatting_again:
 		jne not_end_of_line2 
 		mov di, offset Second_Player_Name
 		inc di
-
-		 mov in_game_iterator ,[di]
+		mov cl,[di]
+		 mov in_game_iterator ,cl
 			 inc in_game_iterator
 
 
@@ -3839,7 +3850,7 @@ start_in_game_chatting_again:
 			mov al,in_game_iterator
 			cmp al,79d
 			jle clear_line_in_game_chat_up2
-		not_end_of_line:
+		
 		
 		mov in_game_iterator,0
 

@@ -24,6 +24,7 @@ ENDM
 SendChar MACRO MyChar
     LOCAL Send
     Send:
+	push ax
        mov         dx, 3fdh
 
 		in          al, dx
@@ -32,6 +33,7 @@ SendChar MACRO MyChar
 		mov         dx, 3f8h ;sending value
 		mov         al, MyChar
 		out         dx, al
+		pop ax
 ENDM 
 ;;;;Macro to recieve a 8 bit word using uart
 ReceiveChar MACRO
@@ -497,6 +499,14 @@ MOVE_PLAYERS PROC FAR
 	                                 MOV  AH,00h
 	                                 INT  16h
 						            SendChar AH 
+
+									;in game chat
+									cmp ah,27h ;press ';' to start ni game chat
+									jne cont1
+									call far ptr start_in_game_chatting
+									jmp End_Moving
+									cont1:
+
 									 cmp AH,39h   ;this is space key(ATTACK BUTTON)
 									 jne First_moved_1
 									 cmp first_player_freeze,0
@@ -511,10 +521,7 @@ MOVE_PLAYERS PROC FAR
 									 call FAR PTR First_Player_Attack
 									 jmp End_Moving
 
-									;in game chat
-									cmp al,';'  ;press ';' to start ni game chat
-									jne First_moved_1
-									call far ptr start_in_game_chatting
+									
 
 
 									First_moved_1:
@@ -530,6 +537,15 @@ CHECK_MOVEMENT_MASTER_UART:
                             ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 	                                ReceiveCharNotAmustToRecieve
 							        MOV LETTER_RECEIVED,AL
+
+
+
+									;in game chat
+									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
+									jne cont2
+									call far ptr start_in_game_chatting
+									jmp End_Moving
+									cont2:
                                 ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
 									 jne Second_MOVED_1
@@ -544,10 +560,7 @@ CHECK_MOVEMENT_MASTER_UART:
 									 call FAR PTR Second_Player_Attack
 									 jmp End_Moving
 
-									;in game chat
-									cmp al,';'  ;press ';' to start ni game chat
-									jne Second_MOVED_1
-									call far ptr start_in_game_chatting
+									
 
 									Second_MOVED_1:
 									 cmp second_player_freeze,0
@@ -568,7 +581,12 @@ CHECK_MOVEMENT_MASTER_UART:
 									 JZ CHECK_MOVEMENT_SLAVE_UART
 
 
-		CHECK_MOVEMENT_SLAVE_KEYBOARD:							 
+		CHECK_MOVEMENT_SLAVE_KEYBOARD:		
+									cmp ah,27h  ;press ';' to start ni game chat
+									jne cont3
+									call far ptr start_in_game_chatting	
+									jmp End_Moving
+									cont3:				 
 	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
 	                                 INT  16h
@@ -582,6 +600,8 @@ CHECK_MOVEMENT_MASTER_UART:
 									 call FAR PTR SECOND_Player_Attack
 									 jmp End_Moving
 
+									
+
 									SECOND_moved_2:
 									cmp first_player_freeze,0
 									jg End_Moving					;if it is still freezed
@@ -593,6 +613,13 @@ CHECK_MOVEMENT_SLAVE_UART:
                                     ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
                                     ReceiveCharNotAmustToRecieve
 							        MOV LETTER_RECEIVED,AL
+
+
+									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
+									jne cont4
+									call far ptr start_in_game_chatting
+									jmp End_Moving
+									cont4:
 									;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 	                                 cmp LETTER_RECEIVED,39h  ;this is SPACE (ATTACK BUTTON)
 									 jne FIRST_MOVED_2
@@ -603,7 +630,8 @@ CHECK_MOVEMENT_SLAVE_UART:
 									 call FAR PTR FIRST_Player_Attack
 									 jmp End_Moving
 
-				
+									
+
 									FIRST_MOVED_2:
 									 cmp second_player_freeze,0
 									 jg End_Moving					;if it is still freezed
@@ -3610,30 +3638,43 @@ SCROLL_dOWN ENDP
 start_in_game_chatting proc FAR
 start_in_game_chatting_again:
 
-	print_first_name_in_game_chat:
 
-    mov SI, OFFSET First_Player_Name
-	inc SI
-	mov cx,0
-	mov cl,First_Player_Name+1
-	inc SI
-	mov  dl, 0   ;Column (0->39)
-	mov  dh, 21   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
-	mov  bh, 0    ;Display page
 
-    print_first_name_in_game_chat_loop :
+	;Check that Transmitter Holding Register is Empty
+	mov dx , 3FDH ; Line Status Register
+	send_chat_now: In al , dx ;Read Line Status
+	test al , 00100000b
+	JZ send_chat_now ;Not empty
+	;If empty put the VALUE in Transmit data register
+	mov dx , 3F8H ; Transmit data register
+	mov al,27h
+	out dx , al
+; debughh:
+; 	jmp debughh
+	; print_first_name_in_game_chat:
+
+    ; mov SI, OFFSET First_Player_Name
+	; inc SI
+	; mov cx,0
+	; mov cl,First_Player_Name+1
+	; inc SI
+	; mov  dl, 0   ;Column (0->39)
+	; mov  dh, 21   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	; mov  bh, 0    ;Display page
+
+    ; print_first_name_in_game_chat_loop :
 	
-	mov  ah, 02h  ;SetCursorPosition
-	int  10h
-	mov  al, [SI]
-	mov  bl, 0Ch  ;Color is red
-	mov  bh, 0    ;Display page
-	mov  ah, 0Eh  ;Teletype
-	int  10h
-	INC SI ;the next char
-	INC DL ;increase col
-	inc in_game_cursor_up
-	Loop print_first_name_in_game_chat_loop
+	; mov  ah, 02h  ;SetCursorPosition
+	; int  10h
+	; mov  al, [SI]
+	; mov  bl, 0Ch  ;Color is red
+	; mov  bh, 0    ;Display page
+	; mov  ah, 0Eh  ;Teletype
+	; int  10h
+	; INC SI ;the next char
+	; INC DL ;increase col
+	; inc in_game_cursor_up
+	; Loop print_first_name_in_game_chat_loop
 	
 	
 	;if x=79  and erase all and print name again
@@ -3642,30 +3683,30 @@ start_in_game_chatting_again:
 	;send the character 
 
 	;print name2 in pos 22;
-	print_second_name_in_game_chat:
+	;print_second_name_in_game_chat:
 
-    mov SI, OFFSET Second_Player_Name
-	inc SI
-	mov cx,0
-	mov cl,Second_Player_Name+1
-	inc SI
-	mov  dl, 0   ;Column (0->39)
-	mov  dh, 22   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
-	mov  bh, 0    ;Display page
+    ; mov SI, OFFSET Second_Player_Name
+	; inc SI
+	; mov cx,0
+	; mov cl,Second_Player_Name+1
+	; inc SI
+	; mov  dl, 0   ;Column (0->39)
+	; mov  dh, 22   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	; mov  bh, 0    ;Display page
 
-    print_second_name_in_game_chat_loop :
+    ; print_second_name_in_game_chat_loop :
 	
-	mov  ah, 02h  ;SetCursorPosition
-	int  10h
-	mov  al, [SI]
-	mov  bl, 0Ch  ;Color is red
-	mov  bh, 0    ;Display page
-	mov  ah, 0Eh  ;Teletype
-	int  10h
-	INC SI ;the next char
-	INC DL ;increase col
-	inc in_game_cursor_down 
-	Loop print_second_name_in_game_chat_loop
+	; mov  ah, 02h  ;SetCursorPosition
+	; int  10h
+	; mov  al, [SI]
+	; mov  bl, 0Ch  ;Color is red
+	; mov  bh, 0    ;Display page
+	; mov  ah, 0Eh  ;Teletype
+	; int  10h
+	; INC SI ;the next char
+	; INC DL ;increase col
+	; inc in_game_cursor_down 
+	; Loop print_second_name_in_game_chat_loop
 	
 	WHILE_IN_GAME_CHAT:
 
@@ -3706,6 +3747,7 @@ start_in_game_chatting_again:
 			 mov di, offset First_Player_Name
 			 inc di  
 			mov cl,[di]
+			mov cl,0
 		 mov in_game_iterator ,cl   ; save in the iterator the size of the player name to begin after it
 			 inc in_game_iterator
 
@@ -3767,6 +3809,7 @@ start_in_game_chatting_again:
 		mov di, offset Second_Player_Name
 		inc di
 		mov cl,[di]
+		mov cl,0
 		 mov in_game_iterator ,cl
 			 inc in_game_iterator
 

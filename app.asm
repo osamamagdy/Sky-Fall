@@ -510,7 +510,9 @@ MOVE_PLAYERS PROC FAR
 									;in game chat
 									cmp ah,27h ;press ';' to start ni game chat
 									jne cont1
+									;call far ptr send_in_chat_inv
 									call far ptr start_in_game_chatting
+									jmp End_Moving
 									cont1:
 
 									 cmp AH,39h   ;this is space key(ATTACK BUTTON)
@@ -549,7 +551,9 @@ CHECK_MOVEMENT_MASTER_UART:
 									;in game chat
 									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
 									jne cont2
+									;call far ptr send_in_chat_inv
 									call far ptr start_in_game_chatting
+									jmp End_Moving
 									cont2:
                                 ;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 									 cmp LETTER_RECEIVED,1Ch  ;this is Enter (ATTACK BUTTON)
@@ -587,14 +591,17 @@ CHECK_MOVEMENT_MASTER_UART:
 
 
 		CHECK_MOVEMENT_SLAVE_KEYBOARD:		
-									cmp ah,27h  ;press ';' to start ni game chat
-									jne cont3
-									call far ptr start_in_game_chatting	
-									cont3:				 
-	;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
+									;Read which key is being pressed (AL = ASCII character/ AH = SCAN CODE)
 	                                 MOV  AH,00h
 	                                 INT  16h
 						            SendChar AH 
+									cmp ah,27h  ;press ';' to start ni game chat
+									jne cont3
+									;call far ptr send_in_chat_inv
+									call far ptr start_in_game_chatting	
+									jmp End_Moving
+									cont3:				 
+									
 									 cmp AH,1Ch   ;this is ENTER key (ATTACK BUTTON)
 									 jne SECOND_moved_2
 									 cmp SECOND_player_freeze,0
@@ -621,7 +628,9 @@ CHECK_MOVEMENT_SLAVE_UART:
 
 									cmp LETTER_RECEIVED,27h  ;press ';' to start ni game chat
 									jne cont4
+									;call far ptr send_in_chat_inv
 									call far ptr start_in_game_chatting
+									jmp End_Moving
 									cont4:
 									;;;;;;;;;;;;;;;;;;;;;;;RECIEVEFROM_UART;;;;;;;;;;;;;;;;;;;;;;;;;;; 
 	                                 cmp LETTER_RECEIVED,39h  ;this is SPACE (ATTACK BUTTON)
@@ -3698,15 +3707,7 @@ start_in_game_chatting_again:
 
 
 
-	;Check that Transmitter Holding Register is Empty
-	mov dx , 3FDH ; Line Status Register
-	send_chat_now: In al , dx ;Read Line Status
-	test al , 00100000b
-	JZ send_chat_now ;Not empty
-	;If empty put the VALUE in Transmit data register
-	mov dx , 3F8H ; Transmit data register
-	mov al,27h
-	out dx , al
+	
 ; debughh:
 ; 	jmp debughh
 	; print_first_name_in_game_chat:
@@ -3783,7 +3784,7 @@ start_in_game_chatting_again:
 		mov in_game_to_send_val,ah  ;; put the vakue of the scan code instead of ascii code as f4 has no ascii
 
 		not_quit:
-		cmp in_game_to_send_val,';'   ; if user press ';'  then he wil continue the game
+		cmp in_game_to_send_val,'='   ; if user press ';'  then he wil continue the game
 		jne not_out_out_chat
 		mov in_game_end_chat,1d 
 		not_out_out_chat:
@@ -3855,9 +3856,9 @@ start_in_game_chatting_again:
 		jne not_end_game2
 		mov is_quit,1d
 		not_end_game2:
-		cmp al,';'          ;if value received is ';' then return back to the game
+		cmp al,'='          ;if value received is ';' then return back to the game
 		jne not_end_chat2
-		mov is_quit,1
+		mov in_game_end_chat,1
 		not_end_chat2:
 
     	print_from_another_player:
@@ -3913,8 +3914,8 @@ start_in_game_chatting_again:
 
 		cmp in_game_end_chat,1
 		je  return_from_ingame_chat
-		cmp is_quit,1
-		je  return_from_ingame_chat
+		; cmp is_quit,1
+		; je  return_from_ingame_chat
 		jmp WHILE_IN_GAME_CHAT
 
 
@@ -3970,7 +3971,10 @@ start_in_game_chatting_again:
 		
 		
 		mov in_game_iterator,0
-
+		mov in_game_end_chat,0
+		mov in_game_cursor_up,0
+		mov in_game_cursor_down,0
+		mov in_game_iterator,0 
 		ret
 
 
@@ -3983,6 +3987,257 @@ mov ah,0
 
 RET
 start_in_game_chatting ENDP
+
+
+
+
+
+
+; start_in_game_chatting2 proc FAR
+; start_in_game_chatting_again2:
+
+
+
+	
+; ;
+	
+; 	WHILE_IN_GAME_CHAT2:
+
+; 		read_keyboard_ingame2:
+; 		mov ah,1
+; 		int 16h
+; 		jnz Do_not_recevive_vale_from_another_player_label2
+; 		jmp recevive_vale_from_another_player2  ;; if no key pressed then see incoming chars
+; 		Do_not_recevive_vale_from_another_player_label2:
+; 		mov ah,0 
+; 		int 16h 
+; 		mov in_game_to_send_val,al
+; 		cmp ah,3eh;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; if key is f4 then get isquit be 1
+; 		jne not_quit2
+; 		mov is_quit, 1
+; 		mov in_game_to_send_val,ah  ;; put the vakue of the scan code instead of ascii code as f4 has no ascii
+
+; 		not_quit2:
+; 		cmp in_game_to_send_val,';'   ; if user press ';'  then he wil continue the game
+; 		jne not_out_out_chat2
+; 		mov in_game_end_chat,1d 
+; 		not_out_out_chat2:
+
+
+; 		;;send value to next player 
+; 		mov dx , 3FDH ; Line Status Register
+; 		AGAIN_in_game_chat2: In al , dx ;Read Line Status
+; 		test al , 00100000b
+; 		JZ AGAIN_in_game_chat2 ;Not empty
+; 		;If empty put the VALUE in Transmit data register
+; 		mov dx , 3F8H ; Transmit data register
+; 		mov al,in_game_to_send_val
+; 		out dx , al
+
+; 		cmp in_game_cursor_up,79  
+; 		jne not_end_of_line22
+; 		;; clear_line_in_game_chat as the cursor has reached its end so we erase from the end of the postion of the player name to position 79
+; 			 mov di, offset First_Player_Name
+; 			 inc di  
+; 			mov cl,[di]
+; 			mov cl,0
+; 		 mov in_game_iterator ,cl   ; save in the iterator the size of the player name to begin after it
+; 			 inc in_game_iterator
+
+
+; 			clear_line_in_game_chat_up22:
+			
+; 			mov  dl, in_game_iterator   ;Column
+; 			mov  dh, 21   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, ' '
+; 			mov  bl, 0h  ;Color is black
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+
+; 			inc in_game_iterator
+; 			mov al,in_game_iterator
+; 			cmp al,79d
+; 			jle clear_line_in_game_chat_up22
+; 		not_end_of_line22:
+; 		mov  dl, in_game_cursor_up   ;Column
+; 			mov  dh, 21   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, in_game_to_send_val
+; 			mov  bl, 0Fh  ;Color is white
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+; 			inc in_game_cursor_up
+
+; 		recevive_vale_from_another_player2:
+; 		mov dx , 3FDH ; Line Status Register
+; 		in al , dx
+; 		test al , 1
+; 		JZ chk_end2 ;Not Ready
+; 		;If Ready read the VALUE in Receive data register
+; 		mov dx , 03F8H
+; 		in al , dx
+; 		mov in_game_received_val , al
+; 		cmp al,3eh   ;;;;;; if the value recieced equals to f4 then end the game 
+; 		jne not_end_game22
+; 		mov is_quit,1d
+; 		not_end_game22:
+; 		cmp al,';'          ;if value received is ';' then return back to the game
+; 		jne not_end_chat22
+; 		mov is_quit,1
+; 		not_end_chat22:
+
+;     	print_from_another_player2:
+
+; 		cmp in_game_cursor_down,79    ;; same as before we clear the line if it reached its end
+; 		jne not_end_of_line223 
+; 		mov di, offset Second_Player_Name
+; 		inc di
+; 		mov cl,[di]
+; 		mov cl,0
+; 		 mov in_game_iterator ,cl
+; 			 inc in_game_iterator
+
+
+; 			clear_line_in_game_chat_down22:
+			
+; 			mov  dl, in_game_iterator   ;Column
+; 			mov  dh, 22   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, ' '
+; 			mov  bl, 0h  ;Color is black
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+
+; 			inc in_game_iterator
+; 			mov al,in_game_iterator
+; 			cmp al,79d
+; 			jle clear_line_in_game_chat_down22
+
+			
+			
+
+; 		not_end_of_line223:
+
+; 		mov  dl, in_game_cursor_down   ;Column
+; 			mov  dh, 22   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, in_game_received_val
+; 			mov  bl, 0Fh  ;Color is white
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+; 			inc in_game_cursor_down
+
+; 		chk_end2:
+
+; 		cmp in_game_end_chat,1
+; 		je  return_from_ingame_chat2
+; 		cmp is_quit,1
+; 		je  return_from_ingame_chat2
+; 		jmp WHILE_IN_GAME_CHAT2
+
+
+; 		return_from_ingame_chat2:
+
+
+; 		mov in_game_end_chat,0
+; 		mov in_game_cursor_up,0
+; 		mov in_game_cursor_down,0
+; 		mov in_game_iterator,0 
+		
+; 		;; clearing chat lines before returning from the functoin 
+; 		clear_line_in_game_chat_down223:
+			
+; 			mov  dl, in_game_iterator   ;Column
+; 			mov  dh, 22   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, ' '
+; 			mov  bl, 0h  ;Color is black
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+
+; 			inc in_game_iterator
+; 			mov al,in_game_iterator
+; 			cmp al,79d
+; 			jle clear_line_in_game_chat_down223
+		
+; 		mov in_game_iterator,0
+
+
+; 		clear_line_in_game_chat_up223:
+			
+; 			mov  dl, in_game_iterator   ;Column
+; 			mov  dh, 21   ;Row
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 02h  ;SetCursorPosition
+; 			int  10h
+
+; 			mov  al, ' '
+; 			mov  bl, 0h  ;Color is black
+; 			mov  bh, 0    ;Display page
+; 			mov  ah, 0Eh  ;Teletype
+; 			int  10h
+
+; 			inc in_game_iterator
+; 			mov al,in_game_iterator
+; 			cmp al,79d
+; 			jle clear_line_in_game_chat_up223
+		
+		
+; 		mov in_game_iterator,0
+; 		mov in_game_end_chat,0
+; 		mov in_game_cursor_up,0
+; 		mov in_game_cursor_down,0
+; 		mov in_game_iterator,0 
+; 		ret
+
+
+
+; 	;if x=79 erase all backward and print name 
+; 	;if recevived print character 
+; 	;if enter rceived erase backwards ;if x=79  erase all and print name again
+
+; mov ah,0
+
+; RET
+; start_in_game_chatting2 ENDP
+
+
+
+
+;description
+send_in_chat_inv PROC
+	;Check that Transmitter Holding Register is Empty
+	mov dx , 3FDH ; Line Status Register
+	send_chat_now: In al , dx ;Read Line Status
+	test al , 00100000b
+	JZ send_chat_now ;Not empty
+	;If empty put the VALUE in Transmit data register
+	mov dx , 3F8H ; Transmit data register
+	mov al,27h
+	out dx , al
+	ret
+send_in_chat_inv ENDP
 
 
 

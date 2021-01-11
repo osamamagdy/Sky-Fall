@@ -3510,14 +3510,14 @@ SET_CHATTERS PROC FAR
 	                    INT  10H
 
 	                    MOV  AH,09
-	                    MOV  DX,OFFSET First_Player_Name         	;PRINT first_chatter NAME
+	                    MOV  DX,OFFSET First_Player_Name+2         	;PRINT first_chatter NAME
 	                    INT  21H
 
 	                    mov  ah,2                            	;SET POSITION
 	                    mov  DX,0c00H
 	                    INT  10H
 	                    MOV  AH,09
-	                    MOV  DX,OFFSET Second_Player_Name        	;PRINT SECOND_chatter NAME
+	                    MOV  DX,OFFSET Second_Player_Name+2       	;PRINT SECOND_chatter NAME
 	                    INT  21H
 
 						mov  ah,2                            	;SET POSITION

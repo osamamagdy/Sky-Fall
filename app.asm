@@ -3837,7 +3837,7 @@ start_in_game_chatting_again:
 			int  10h
 
 			mov  al, in_game_to_send_val
-			mov  bl, 0Fh  ;Color is white
+			mov  bl, 4h  ;Color is white
 			mov  bh, 0    ;Display page
 			mov  ah, 0Eh  ;Teletype
 			int  10h
@@ -3904,7 +3904,7 @@ start_in_game_chatting_again:
 			int  10h
 
 			mov  al, in_game_received_val
-			mov  bl, 0Fh  ;Color is white
+			mov  bl, 1h  ;Color is white
 			mov  bh, 0    ;Display page
 			mov  ah, 0Eh  ;Teletype
 			int  10h

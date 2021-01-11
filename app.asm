@@ -391,9 +391,9 @@ img DB 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 1
 x_position dw 50
 y_position dw 30
 
-first_player_wins db 'First Player Wins' 
+first_player_wins db 'First Player Wins $' 
 
-second_player_wins db 'Second player wins'
+second_player_wins db 'Second player wins $'
 
 GAME_OVER_mess db 'Press ESC Key to Return to main menu $'
 
@@ -3236,7 +3236,7 @@ Start_Game PROC FAR
 				CALL FAR PTR CLEAR_SCREEN ;clear the screen before entering the game
 				; call FAR PTR draw_background
 				call far PTR Game_over_screen
-					mov ax,second_player_health
+				mov ax,second_player_health
 				cmp ax,0
 				jz first_wins
 				mov ax,first_player_health
@@ -3244,32 +3244,45 @@ Start_Game PROC FAR
 				jz second_wins
 				jmp final
 					first_wins:
-					mov first_player_X,30 
+					mov first_player_X,10 
 					mov first_player_y,90
 					call FAR PTR draw_p1
-					MOV BP, OFFSET first_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 0eh ;YELLOW
-					MOV CX, 17 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
+					mov ah,2
+
+					mov dl,20
+					mov dh,90
+					int 10h
+					PRINT_Messages First_player_wins
+					; MOV BP, OFFSET first_player_wins+1 ; ES: BP POINTS TO THE TEXT
+					; MOV AH, 13H ; WRITE THE STRING
+					; MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					; XOR BH,BH ; VIDEO PAGE = 0
+					; MOV BL, 0eh ;YELLOW
+					; MOV CX, 17 ; LENGTH OF THE STRING
+					; MOV DH, 12 ;ROW TO PLACE STRING
+					; MOV DL, 12 ; COLUMN TO PLACE STRING
+					; INT 10H
 					jmp final
 					second_wins:
-					mov second_player_X,30
+					mov second_player_X,10
 					mov second_player_Y,90
 					call FAR PTR draw_p2
-					MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
-					MOV AH, 13H ; WRITE THE STRING
-					MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
-					XOR BH,BH ; VIDEO PAGE = 0
-					MOV BL, 01h ;BLUE
-					MOV CX, 20 ; LENGTH OF THE STRING
-					MOV DH, 12 ;ROW TO PLACE STRING
-					MOV DL, 12 ; COLUMN TO PLACE STRING
-					INT 10H
+					mov ah,2
+
+					mov dl,20
+					mov dh,90
+					int 10h
+					PRINT_Messages Second_player_wins
+
+					; MOV BP, OFFSET second_player_wins ; ES: BP POINTS TO THE TEXT
+					; MOV AH, 13H ; WRITE THE STRING
+					; MOV AL, 01H; ATTRIBUTE IN BL, MOVE CURSOR TO THAT POSITION
+					; XOR BH,BH ; VIDEO PAGE = 0
+					; MOV BL, 01h ;BLUE
+					; MOV CX, 20 ; LENGTH OF THE STRING
+					; MOV DH, 12 ;ROW TO PLACE STRING
+					; MOV DL, 12 ; COLUMN TO PLACE STRING
+					; INT 10H
 
 				final:
                 mov ah,2        

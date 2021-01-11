@@ -3324,6 +3324,80 @@ Start_Game PROC FAR
 				int 16h
 				cmp AH,01
 				JNE Final
+				;Now Send it to the reciever
+				mov dx , 3FDH		; Line Status Register
+				Send_ESC_GAME_OVER_AGAIN: 
+				In al , dx 			;Read Line Status
+  				test al , 00100000b
+  				JZ Send_ESC_GAME_OVER_AGAIN         ;Not empty
+
+				;If empty put the VALUE in Transmit data register
+  				mov dx , 3F8H		; Transmit data register
+  				mov  al,01			;ESC KEY SCAN CODE
+  				out dx , al
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+				Start_RECIEVING_VALUES:
+				
+				;Wait for the recived ESC from other user
+				;Check that Data is Ready
+				mov dx , 3FDH		; Line Status Register
+				Recieve_ESC_GAME_OVER_AGAIN:
+				in al , dx 
+  				test al , 1
+  				JZ Recieve_ESC_GAME_OVER_AGAIN                                    ;Not Ready
+ 				;If Ready read the VALUE in Receive data register
+ 		 		mov dx , 03F8H
+  				in al , dx 
+		  		cmp al,01			;ESC KEY SCAN CODE
+				JNE Start_RECIEVING_VALUES
+
+
+
+				RESET_ALL_DATA:
+				mov	first_player_X,50								 ;The starting X-position of player one
+			mov	first_player_Y    , 50								 ;The starting Y-position of player one
+			mov	first_player_health  , 5                                 ;Number of hearts to the first player
+			mov	first_player_health_immunity , 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
+			mov	first_player_Freeze , 0								 ;Duration for which the player is frozen
+			mov	First_Is_Collided , 0                                   ;Boolean Variable To check if the player is colliding
+			mov	second_player_X     ,  270								 ;The starting X-position of player two
+			mov	SECOND_PLAYER_Y     ,  50								 ;The starting Y-position of player two
+			mov	second_player_health , 5                                ;Number of hearts to the second player
+			mov	second_player_health_immunity , 0						 ;when the player gets hit by barrier, he gains an immunity to resist the barriers
+			mov	second_player_Freeze , 0								 ;Duration for which the player is frozen
+			mov	Second_Is_Collided , 0                                ;Boolean Variable To check if the player is colliding
+			mov	X_BARRIER1   ,  10									 	 ; xpos of barrier1
+			mov	Y_BARRIER1   ,  140  									 ; ypos of barrier1
+			mov	X_BARRIER2   ,  260 									 ; xpos of barrier2
+			mov	Y_BARRIER2   ,  104									 ; ypos of barrier2
+			mov	GAME_MASTER , 00H
+			mov	GAME_SLAVE , 0
+			mov	CHAT_MASTER , 0
+			mov	CHAT_SLAVE , 0
+			mov	LEVEL_CHOSEN , 0
+			mov	First_cursor_X         ,  6
+			mov	First_cursor_Y         ,  1
+
+				; SECOND CURSOR USED FOR RECEIVING
+			mov	SECOND_CURSOR_X        ,  6
+			mov	SECOND_CURSOR_Y        ,  13
+			mov	end_line               ,  76
+
+			mov	IS_ENTER               ,  0
+			mov	IS_BACKSPACE           ,  0
+
+						
+			;;; IN GAME CHAT MODULE 
+			mov	in_game_cursor_up , 0
+			mov	in_game_cursor_down , 0
+			mov	in_game_received_val , 0
+			mov	in_game_to_send_val  , 0
+			mov	in_game_iterator , 0
+			mov	in_game_end_chat , 0 
+			mov	is_quit , 0
+			mov	level , 0
+			mov	is_master , 01h ;WHEN A PLAYER SENT INVI. TO THE ANOTHER ONE SO HE IS THE MASTER (MASTER VALUE=1)
+
 
 	RET
 Start_Game ENDP

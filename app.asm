@@ -3800,7 +3800,7 @@ start_in_game_chatting_again:
 		mov al,in_game_to_send_val
 		out dx , al
 
-		cmp in_game_cursor_up,79  
+		cmp in_game_cursor_up,39 
 		jne not_end_of_line
 		;; clear_line_in_game_chat as the cursor has reached its end so we erase from the end of the postion of the player name to position 79
 			 mov di, offset First_Player_Name
@@ -3829,6 +3829,7 @@ start_in_game_chatting_again:
 			mov al,in_game_iterator
 			cmp al,79d
 			jle clear_line_in_game_chat_up
+			mov in_game_cursor_up,0
 		not_end_of_line:
 		mov  dl, in_game_cursor_up   ;Column
 			mov  dh, 21   ;Row
@@ -3863,7 +3864,7 @@ start_in_game_chatting_again:
 
     	print_from_another_player:
 
-		cmp in_game_cursor_down,79    ;; same as before we clear the line if it reached its end
+		cmp in_game_cursor_down,39    ;; same as before we clear the line if it reached its end
 		jne not_end_of_line2 
 		mov di, offset Second_Player_Name
 		inc di
@@ -3891,6 +3892,7 @@ start_in_game_chatting_again:
 			mov al,in_game_iterator
 			cmp al,79d
 			jle clear_line_in_game_chat_down
+			mov in_game_cursor_down,0
 
 			
 			

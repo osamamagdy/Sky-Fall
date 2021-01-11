@@ -417,6 +417,20 @@ Goodbye_mess db 'Goodbye *^-^* $'
 	second_chatter         db  'chatter 2 : $'
 	chat_end_string        db  'To end chat press ESC $'
 
+
+
+			
+;;; IN GAME CHAT MODULE 
+	in_game_cursor_up db 0
+	in_game_cursor_down db 0
+	in_game_received_val db 0
+	in_game_to_send_val  db 0
+	in_game_iterator db 0
+	in_game_end_chat db 0 
+	is_quit db 0
+
+
+
 level DB 0
 ;------------------------------------------------------------
 ;;FOR MAKING GAME BEING PLAYED BY TWO PCS
@@ -3564,4 +3578,284 @@ SCROLL_dOWN PROC FAR
 		POP AX
 	RET 
 SCROLL_dOWN ENDP
+
+
+
+
+
+start_in_game_chatting proc FAR
+start_in_game_chatting_again:
+
+	print_first_name_in_game_chat:
+
+    mov SI, OFFSET First_Player_Name
+	inc SI
+	mov cx,0
+	mov cl,First_Player_Name+1
+	inc SI
+	mov  dl, 0   ;Column (0->39)
+	mov  dh, 21   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	mov  bh, 0    ;Display page
+
+    print_first_name_in_game_chat_loop :
+	
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+	mov  al, [SI]
+	mov  bl, 0Ch  ;Color is red
+	mov  bh, 0    ;Display page
+	mov  ah, 0Eh  ;Teletype
+	int  10h
+	INC SI ;the next char
+	INC DL ;increase col
+	inc in_game_cursor_up
+	Loop print_first_name_in_game_chat_loop
+	
+	
+	;if x=79  and erase all and print name again
+	;print chars from keyboard
+	;if  enter pressed  then erase backward all and prnit name agaibn 
+	;send the character 
+
+	;print name2 in pos 22;
+	print_second_name_in_game_chat:
+
+    mov SI, OFFSET Second_Player_Name
+	inc SI
+	mov cx,0
+	mov cl,Second_Player_Name+1
+	inc SI
+	mov  dl, 0   ;Column (0->39)
+	mov  dh, 22   ;Row (0-> 24) and we're only printing in the 1/5 of the screen
+	mov  bh, 0    ;Display page
+
+    print_second_name_in_game_chat_loop :
+	
+	mov  ah, 02h  ;SetCursorPosition
+	int  10h
+	mov  al, [SI]
+	mov  bl, 0Ch  ;Color is red
+	mov  bh, 0    ;Display page
+	mov  ah, 0Eh  ;Teletype
+	int  10h
+	INC SI ;the next char
+	INC DL ;increase col
+	inc in_game_cursor_down 
+	Loop print_second_name_in_game_chat_loop
+	
+	WHILE_IN_GAME_CHAT:
+
+		read_keyboard_ingame:
+		mov ah,1
+		int 16h
+		jz recevive_vale_from_another_player  ;; if no key pressed then see incoming chars
+		mov ah,0 
+		int 16h 
+		mov in_game_to_send_val,al
+		cmp ah,3eh;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; if key is f4 then get isquit be 1
+		jne not_quit
+		mov is_quit, 1
+		mov in_game_to_send_val,ah  ;; put the vakue of the scan code instead of ascii code as f4 has no ascii
+
+		not_quit:
+		cmp in_game_to_send_val,';'   ; if user press ';'  then he wil continue the game
+		jne not_out_out_chat
+		mov in_game_end_chat,1d 
+		not_out_out_chat:
+
+
+		;;send value to next player 
+		mov dx , 3FDH ; Line Status Register
+		AGAIN_in_game_chat: In al , dx ;Read Line Status
+		test al , 00100000b
+		JZ AGAIN_in_game_chat ;Not empty
+		;If empty put the VALUE in Transmit data register
+		mov dx , 3F8H ; Transmit data register
+		mov al,in_game_to_send_val
+		out dx , al
+
+		cmp in_game_cursor_up,79  
+		jne not_end_of_line
+		;; clear_line_in_game_chat as the cursor has reached its end so we erase from the end of the postion of the player name to position 79
+			 mov di, offset First_Player_Name
+			 inc di  
+			 mov in_game_iterator ,[di]    ; save in the iterator the size of the player name to begin after it
+			 inc in_game_iterator
+
+
+			clear_line_in_game_chat_up:
+			
+			mov  dl, in_game_iterator   ;Column
+			mov  dh, 21   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, ' '
+			mov  bl, 0h  ;Color is black
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+
+			inc in_game_iterator
+			mov al,in_game_iterator
+			cmp al,79d
+			jle clear_line_in_game_chat_up
+		not_end_of_line:
+		mov  dl, in_game_cursor_up   ;Column
+			mov  dh, 21   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, in_game_to_send_val
+			mov  bl, 0Fh  ;Color is white
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+			inc in_game_cursor_up
+
+		recevive_vale_from_another_player:
+		mov dx , 3FDH ; Line Status Register
+		in al , dx
+		test al , 1
+		JZ chk_end ;Not Ready
+		;If Ready read the VALUE in Receive data register
+		mov dx , 03F8H
+		in al , dx
+		mov in_game_received_val , al
+		cmp al,3eh   ;;;;;; if the value recieced equals to f4 then end the game 
+		jne not_end_game2
+		mov is_quit,1d
+		not_end_game2:
+		cmp al,';'          ;if value received is ';' then return back to the game
+		jne not_end_chat2
+		mov is_quit,1
+		not_end_chat2:
+
+    	print_from_another_player:
+
+		cmp in_game_cursor_down,79    ;; same as before we clear the line if it reached its end
+		jne not_end_of_line2 
+		mov di, offset Second_Player_Name
+		inc di
+
+		 mov in_game_iterator ,[di]
+			 inc in_game_iterator
+
+
+			clear_line_in_game_chat_down:
+			
+			mov  dl, in_game_iterator   ;Column
+			mov  dh, 22   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, ' '
+			mov  bl, 0h  ;Color is black
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+
+			inc in_game_iterator
+			mov al,in_game_iterator
+			cmp al,79d
+			jle clear_line_in_game_chat_down
+
+			
+			
+
+		not_end_of_line2:
+
+		mov  dl, in_game_cursor_down   ;Column
+			mov  dh, 22   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, in_game_received_val
+			mov  bl, 0Fh  ;Color is white
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+			inc in_game_cursor_down
+
+		chk_end:
+
+		cmp in_game_end_chat,1
+		je  return_from_ingame_chat
+		cmp is_quit,1
+		je  return_from_ingame_chat
+		jmp WHILE_IN_GAME_CHAT
+
+
+		return_from_ingame_chat:
+
+
+		mov in_game_end_chat,0
+		mov in_game_cursor_up,0
+		mov in_game_cursor_down,0
+		mov in_game_iterator,0 
+		
+		;; clearing chat lines before returning from the functoin 
+		clear_line_in_game_chat_down2:
+			
+			mov  dl, in_game_iterator   ;Column
+			mov  dh, 22   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, ' '
+			mov  bl, 0h  ;Color is black
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+
+			inc in_game_iterator
+			mov al,in_game_iterator
+			cmp al,79d
+			jle clear_line_in_game_chat_down2
+		
+		mov in_game_iterator,0
+
+
+		clear_line_in_game_chat_up2:
+			
+			mov  dl, in_game_iterator   ;Column
+			mov  dh, 21   ;Row
+			mov  bh, 0    ;Display page
+			mov  ah, 02h  ;SetCursorPosition
+			int  10h
+
+			mov  al, ' '
+			mov  bl, 0h  ;Color is black
+			mov  bh, 0    ;Display page
+			mov  ah, 0Eh  ;Teletype
+			int  10h
+
+			inc in_game_iterator
+			mov al,in_game_iterator
+			cmp al,79d
+			jle clear_line_in_game_chat_up2
+		not_end_of_line:
+		
+		mov in_game_iterator,0
+
+		ret
+
+
+
+	;if x=79 erase all backward and print name 
+	;if recevived print character 
+	;if enter rceived erase backwards ;if x=79  erase all and print name again
+
+
+
+RET
+start_in_game_chatting ENDP
+
+
+
 END MAIN

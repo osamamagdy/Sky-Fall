@@ -24,4 +24,17 @@ The victim will be frozen and can't control his suit for a certain time, so he w
 <br/>
 They will continue falling untill on of them takes five hits. The winner is the other player.
 <hr/>
-## 📷 ScreenShots:
+## 📷 Demos:
+<br/>
+<div align="center">
+  ![Level one](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+<br/>
+  ![Level two](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+<br/>
+  ![Playing with two players on the different pc's](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+<br/>
+  ![Chat module between players](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+<br/>
+  ![In-game-chat module between players](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+<br/>
+  </div>

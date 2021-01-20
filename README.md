@@ -5,7 +5,6 @@ A two player game written in assymbly x86
   copyright of this image: @<a href="https://www.aaronbrickdesigner.com/iron-man">Aaron Brick designer</a>
 </div>
 # Game-Story
-</br>
 Iron man and Warmachine are challenging each others again. Every one of them claims to be the best pilot of the MARK-n suit.
 </br>
 To end it once and for all they agreed to do the next:

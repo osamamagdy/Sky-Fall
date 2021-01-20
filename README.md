@@ -27,14 +27,14 @@ They will continue falling untill on of them takes five hits. The winner is the 
 ## 📷 Demos:
 <br/>
 <div align="center">
-  ![Level one](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+![Level_one](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level%20one%20demo.gif)
 <br/>
-  ![Level two](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+![Level_two](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level%20two%20demo.gif)
 <br/>
-  ![Playing with two players on the different pc's](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+![Playing_with_two_players_on_the_different_pc's](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Two%20players%20Game.gif)
 <br/>
-  ![Chat module between players](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+![Chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Using%20Chat%20module.gif)
 <br/>
-  ![In-game-chat module between players](https://github.com/osamamagdy/osamamagdy/blob/main/Welcome.gif)
+![In-game-chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/In-Game-Chat.gif)
 <br/>
   </div>

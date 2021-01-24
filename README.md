@@ -27,14 +27,25 @@ To end it once and for all they agreed to do the next:
 ## 📷 Demos:
 <br/>
 <div align="center">
-![Level_one](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level%20one%20demo.gif)
+
+![Level_one](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level_one_demo.gif)
+
 <br/>
-![Level_two](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level%20two%20demo.gif)
+
+![Level_two](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level_two_demo.gif)
+
 <br/>
-![Playing_with_two_players_on_the_different_pc's](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Two%20players%20Game.gif)
+<h3>The red plauer is the one who sent invitation</h3>
+
+![Playing_with_two_players_on_the_different_pc's](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Two_players_Game.gif)
+
 <br/>
-![Chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Using%20Chat%20module.gif)
+
+![Chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Using_Chat_module.gif)
+
 <br/>
-![In-game-chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/In-Game-Chat.gif)
+
+![In-game-chat_module_between_players](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/In_Game_Chat.gif)
+
 <br/>
   </div>

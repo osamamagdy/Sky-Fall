@@ -1628,8 +1628,12 @@ Draw_RED_LASER_LEFT_TO_RIGHT PROC FAR
 		End_Draw_Red_Laser_1:
 
 		mov cx,0ffffh
+		
 		wait1: 
-			
+			mov bx,9h
+			wait1_again: 
+			dec bx
+			jnz wait1_again
 		LOOP wait1
 
 		mov cx,Red_Laser_Start_X
@@ -1707,7 +1711,10 @@ Draw_RED_LASER_RIGHT_TO_LEFT PROC
 		END_Draw_Red_Laser_2:
 		mov cx,0ffffh
 		wait2: 
-			
+			mov bx,9h
+			wait2_again: 
+			dec bx
+			jnz wait2_again
 		LOOP wait2
 
 
@@ -1788,6 +1795,10 @@ Draw_BLUE_LASER_LEFT_TO_RIGHT PROC
 
 		mov cx,0ffffh
 		Wait_3: 
+			mov bx,9h
+			wait3_again: 
+			dec bx
+			jnz wait3_again
 			
 		LOOP Wait_3
 
@@ -1870,6 +1881,10 @@ Draw_BLUE_LASER_RIGHT_TO_LEFT PROC
 	mov cx,0ffffh
 	Wait_4: 
 		
+			mov bx,9h
+			wait4_again: 
+			dec bx
+			jnz wait4_again
 	LOOP Wait_4
 
 		mov cx,Blue_Laser_Start_X

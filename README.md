@@ -35,7 +35,6 @@ To end it once and for all they agreed to do the next:
 ![Level_two](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Level_two_demo.gif)
 
 <br/>
-<h3>The red plauer is the one who sent invitation</h3>
 
 ![Playing_with_two_players_on_the_different_pc's](https://github.com/osamamagdy/Sky-Fall/blob/main/Demos/Two_players_Game.gif)
 

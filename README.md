@@ -1,5 +1,5 @@
 # ✈️Sky-Fall
-🎇A two player game written in assymbly x86
+🎇A two player game written in assembly x86
 
 <div align="center">
 
